@@ -7,15 +7,16 @@ use Filament\Facades\Filament;
 use Filament\Pages\Page;
 use Filament\Resources\Pages\Page as ResourcePage;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\Alignment;
+use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
 use Harvirsidhu\FilamentCards\CardGroup;
 use Harvirsidhu\FilamentCards\CardItem;
-use Harvirsidhu\FilamentCards\Enums\Alignment;
 use Illuminate\Support\Collection;
 
 abstract class CardsPage extends Page
 {
-    protected string $view = 'filament-cards::pages.cards-page';
+    protected string $view = 'harvirsidhu-filament-cards::pages.cards-page';
 
     protected static int $columns = 3;
 
@@ -24,6 +25,14 @@ abstract class CardsPage extends Page
     protected static bool $iconInlined = false;
 
     protected static IconSize $iconSize = IconSize::Medium;
+
+    protected static IconPosition $iconPosition = IconPosition::Before;
+
+    /** @var array<class-string> */
+    protected static array $excludedClusterComponents = [];
+
+    /** @var array<class-string> */
+    protected static array $excludedResourcePages = [];
 
     /** @var array<CardGroup|CardItem> */
     protected static array $appendedCards = [];
@@ -72,11 +81,13 @@ abstract class CardsPage extends Page
             ->reject(fn (string $component): bool => $component === static::class)
             ->filter(function (string $component): bool {
                 if (is_a($component, Resource::class, true)) {
-                    return $component::canAccess();
+                    return $component::canAccess()
+                        && static::shouldIncludeClusterComponent($component);
                 }
 
                 if (is_a($component, Page::class, true)) {
-                    return $component::canAccess();
+                    return $component::canAccess()
+                        && static::shouldIncludeClusterComponent($component);
                 }
 
                 return false;
@@ -87,13 +98,16 @@ abstract class CardsPage extends Page
                 if (is_a($component, Resource::class, true)) {
                     $item
                         ->label($component::getNavigationLabel())
+                        ->description(static::getNavigationDescription($component))
                         ->icon($component::getNavigationIcon())
                         ->sort($component::getNavigationSort() ?? 0)
                         ->url($component::getUrl());
                 }
 
                 if (is_a($component, Page::class, true) && ! is_a($component, Resource::class, true)) {
-                    $item->sort($component::getNavigationSort() ?? 0);
+                    $item
+                        ->description(static::getNavigationDescription($component))
+                        ->sort($component::getNavigationSort() ?? 0);
                 }
 
                 return $item;
@@ -125,16 +139,35 @@ abstract class CardsPage extends Page
 
                 return $pageClass !== static::class
                     && is_a($pageClass, Page::class, true)
-                    && $pageClass::canAccess();
+                    && $pageClass::canAccess()
+                    && static::shouldIncludeResourcePage($pageClass);
             })
             ->map(function ($pageRegistration): CardItem {
                 $pageClass = $pageRegistration->getPage();
 
                 return CardItem::make($pageClass)
+                    ->description(static::getNavigationDescription($pageClass))
                     ->sort($pageClass::getNavigationSort() ?? 0);
             });
 
         return static::groupItemsByNavigation($items);
+    }
+
+    /**
+     * Try to get a description from the page/resource class.
+     * Checks for a static $navigationDescription property or getNavigationDescription() method.
+     */
+    protected static function getNavigationDescription(string $class): ?string
+    {
+        if (method_exists($class, 'getNavigationDescription')) {
+            return $class::getNavigationDescription();
+        }
+
+        if (property_exists($class, 'navigationDescription')) {
+            return $class::$navigationDescription;
+        }
+
+        return null;
     }
 
     /**
@@ -151,12 +184,8 @@ abstract class CardsPage extends Page
                 return null;
             }
 
-            if (is_a($page, Resource::class, true)) {
-                return $page::getNavigationGroup();
-            }
-
-            if (is_a($page, Page::class, true)) {
-                return $page::getNavigationGroup();
+            if (is_a($page, Resource::class, true) || is_a($page, Page::class, true)) {
+                return static::resolveComponentCardsGroup($page);
             }
 
             return null;
@@ -194,6 +223,82 @@ abstract class CardsPage extends Page
         return null;
     }
 
+    /**
+     * Whether a discovered component should be included in cluster cards.
+     */
+    protected static function shouldIncludeClusterComponent(string $component): bool
+    {
+        if (in_array($component, static::$excludedClusterComponents, true)) {
+            return false;
+        }
+
+        return static::shouldIncludeDiscoveredCard($component);
+    }
+
+    /**
+     * Whether a discovered page should be included in resource cards.
+     */
+    protected static function shouldIncludeResourcePage(string $pageClass): bool
+    {
+        if (in_array($pageClass, static::$excludedResourcePages, true)) {
+            return false;
+        }
+
+        return static::shouldIncludeDiscoveredCard($pageClass);
+    }
+
+    /**
+     * Override to customize inclusion logic for all discovered cards.
+     */
+    protected static function shouldIncludeDiscoveredCard(string $component): bool
+    {
+        return static::resolveComponentCardsVisibility($component);
+    }
+
+    /**
+     * Resolves visibility from component-level settings.
+     * Supports showInFilamentCards() or static $showInFilamentCards.
+     * Falls back to shouldRegisterNavigation() when available.
+     */
+    protected static function resolveComponentCardsVisibility(string $component): bool
+    {
+        if (method_exists($component, 'showInFilamentCards')) {
+            return (bool) $component::showInFilamentCards();
+        }
+
+        if (property_exists($component, 'showInFilamentCards')) {
+            return (bool) $component::$showInFilamentCards;
+        }
+
+        if (is_callable([$component, 'shouldRegisterNavigation'])) {
+            return (bool) $component::shouldRegisterNavigation();
+        }
+
+        return true;
+    }
+
+    /**
+     * Resolves group name for discovered cards.
+     * Supports getFilamentCardsGroup() or static $filamentCardsGroup.
+     * Falls back to getNavigationGroup() when available.
+     */
+    protected static function resolveComponentCardsGroup(string $component): ?string
+    {
+        if (method_exists($component, 'getFilamentCardsGroup')) {
+            return $component::getFilamentCardsGroup();
+        }
+
+        if (property_exists($component, 'filamentCardsGroup')) {
+            return $component::$filamentCardsGroup;
+        }
+
+        if (is_callable([$component, 'getNavigationGroup'])) {
+            return $component::getNavigationGroup();
+        }
+
+        return null;
+    }
+
     protected function getViewData(): array
     {
         return [
@@ -202,6 +307,7 @@ abstract class CardsPage extends Page
             'alignment' => static::$itemsAlignment,
             'isIconInlined' => static::$iconInlined,
             'iconSize' => static::$iconSize,
+            'iconPosition' => static::$iconPosition,
         ];
     }
 

@@ -12,6 +12,7 @@ use Filament\Support\Concerns\EvaluatesClosures;
 use Filament\Support\Concerns\HasColor;
 use Filament\Support\Concerns\HasExtraAttributes;
 use Filament\Support\Concerns\HasIcon;
+use Filament\Support\Enums\Alignment;
 use Harvirsidhu\FilamentCards\Concerns\CanBeDisabled;
 use Harvirsidhu\FilamentCards\Concerns\CanBeHidden;
 use Harvirsidhu\FilamentCards\Concerns\HasDescription;
@@ -37,6 +38,8 @@ class CardItem
 
     protected bool $openUrlInNewTab = false;
 
+    protected Alignment | string | Closure | null $alignment = null;
+
     public function __construct(?string $page = null, string | Closure | null $url = null)
     {
         $this->page = $page;
@@ -50,6 +53,18 @@ class CardItem
         }
 
         return new static(url: $pageClassOrUrl);
+    }
+
+    public function alignment(Alignment | string | Closure | null $alignment): static
+    {
+        $this->alignment = $alignment;
+
+        return $this;
+    }
+
+    public function getAlignment(): Alignment | string | null
+    {
+        return $this->evaluate($this->alignment);
     }
 
     public function url(string | Closure | null $url): static

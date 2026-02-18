@@ -1,11 +1,12 @@
 @php
+    use Filament\Support\Enums\Alignment;
+    use Filament\Support\Enums\IconPosition;
     use Filament\Support\Enums\IconSize;
-    use Harvirsidhu\FilamentCards\Enums\Alignment;
 
     $iconSizeClass = match ($iconSize) {
         IconSize::Small => 'w-6 h-6',
         IconSize::Medium => 'w-10 h-10',
-        IconSize::Large => 'w-14 h-14',
+        IconSize::Large => 'w-12 h-12',
         default => 'w-10 h-10',
     };
 
@@ -81,12 +82,12 @@
                             @endif
 
                             <div>
-                                <h4 class="text-sm font-medium tracking-wide text-gray-500 dark:text-gray-400">
+                                <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">
                                     {{ $groupLabel }}
                                 </h4>
 
                                 @if (filled($groupDescription))
-                                    <p class="text-xs text-gray-400 dark:text-gray-500">
+                                    <p class="text-sm text-gray-400 dark:text-gray-500">
                                         {{ $groupDescription }}
                                     </p>
                                 @endif
@@ -101,11 +102,12 @@
                             x-collapse
                         @endif
                         @class([
-                            'grid grid-cols-1 gap-4',
+                            'grid grid-cols-1',
                             'md:grid-cols-2' => $groupColumns >= 2,
                             'lg:grid-cols-3' => $groupColumns >= 3,
                             'xl:grid-cols-4' => $groupColumns >= 4,
                             'gap-3' => $isCompact,
+                            'gap-4' => ! $isCompact,
                         ])
                     >
                         @foreach ($groupItems as $item)
@@ -188,9 +190,10 @@
 
                                 <div @class([
                                     'flex gap-2',
-                                    'flex-col' => ! $isIconInlined,
-                                    'flex-row items-center' => $isIconInlined && $alignment !== Alignment::End,
-                                    'flex-row-reverse items-center' => $isIconInlined && $alignment === Alignment::End,
+                                    'flex-col' => ! $isIconInlined && $iconPosition === IconPosition::Before,
+                                    'flex-col-reverse' => ! $isIconInlined && $iconPosition === IconPosition::After,
+                                    'flex-row items-center' => $isIconInlined && $iconPosition === IconPosition::Before,
+                                    'flex-row-reverse items-center' => $isIconInlined && $iconPosition === IconPosition::After,
                                     'items-start' => ! $isIconInlined && $alignment === Alignment::Start,
                                     'items-center' => ! $isIconInlined && $alignment === Alignment::Center,
                                     'items-end' => ! $isIconInlined && $alignment === Alignment::End,
@@ -220,7 +223,7 @@
 
                                 @if (filled($itemDescription))
                                     <p @class([
-                                        'text-xs text-gray-500 dark:text-gray-400',
+                                        'text-sm text-gray-500 dark:text-gray-400',
                                         'text-start' => $alignment === Alignment::Start,
                                         'text-center' => $alignment === Alignment::Center,
                                         'text-end' => $alignment === Alignment::End,

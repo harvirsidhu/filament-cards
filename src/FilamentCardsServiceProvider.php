@@ -9,7 +9,7 @@ class FilamentCardsServiceProvider extends PackageServiceProvider
 {
     public static string $name = 'filament-cards';
 
-    public static string $viewNamespace = 'filament-cards';
+    public static string $viewNamespace = 'harvirsidhu-filament-cards';
 
     public function configurePackage(Package $package): void
     {
