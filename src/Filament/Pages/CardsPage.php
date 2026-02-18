@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
 
 abstract class CardsPage extends Page
 {
-    protected static string $view = 'filament-cards::pages.cards-page';
+    protected string $view = 'filament-cards::pages.cards-page';
 
     protected static int $columns = 3;
 
