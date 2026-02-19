@@ -162,9 +162,10 @@ class CompanySettings extends Page
 3. Checks `canAccess()` on each component (respects authorization)
 4. Checks cards visibility via `showInFilamentCards()` or `$showInFilamentCards` (if defined on the component), otherwise falls back to `shouldRegisterNavigation()`
 5. Uses each page's `$navigationLabel`, `$navigationIcon`, and URL
-6. **New:** Checks for `$navigationDescription` property (or `getNavigationDescription()` method) on the page class
-7. Groups cards by `getFilamentCardsGroup()` / `$filamentCardsGroup` (if defined), otherwise falls back to `$navigationGroup`
-8. Sorts by `$navigationSort`
+6. Reads `getNavigationBadge()` / `getNavigationBadgeColor()` when available
+7. **New:** Checks for `$navigationDescription` property (or `getNavigationDescription()` method) on the page class
+8. Groups cards by `getFilamentCardsGroup()` / `$filamentCardsGroup` (if defined), otherwise falls back to `$navigationGroup`
+9. Sorts by `$navigationSort`
 
 ### Hiding Auto-Discovered Cards
 
@@ -331,7 +332,7 @@ CardItem::make('/custom/path')          // URL string
 CardItem::make('https://example.com')   // External URL
 ```
 
-When a Page or Resource class is passed, the card automatically resolves its `label`, `icon`, and `url` from the class's navigation properties.
+When a Page or Resource class is passed, the card automatically resolves its `label`, `icon`, `badge`, `badgeColor`, and `url` from the class's navigation properties.
 
 ### `label()`
 
@@ -362,6 +363,27 @@ class CompanySettings extends Page
     public static ?string $navigationDescription = 'Manage company details.';
 }
 ```
+
+### `badge()`
+
+Add a badge to the right side of the card title:
+
+```php
+CardItem::make(CompanySettings::class)
+    ->badge('Beta')
+```
+
+### `badgeColor()`
+
+Set the badge color using Filament color names (or an equivalent color definition):
+
+```php
+CardItem::make(CompanySettings::class)
+    ->badge('12')
+    ->badgeColor('primary')
+```
+
+**Auto-Discovery:** If you are using `discoverClusterCards()` or `discoverResourceCards()`, badge values are read from `getNavigationBadge()` and `getNavigationBadgeColor()` when available on the discovered Page/Resource.
 
 ### `icon()`
 

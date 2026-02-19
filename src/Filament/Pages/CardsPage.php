@@ -12,6 +12,7 @@ use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
 use Harvirsidhu\FilamentCards\CardGroup;
 use Harvirsidhu\FilamentCards\CardItem;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
 
 abstract class CardsPage extends Page
@@ -99,6 +100,8 @@ abstract class CardsPage extends Page
                     $item
                         ->label($component::getNavigationLabel())
                         ->description(static::getNavigationDescription($component))
+                        ->badge(static::resolveDiscoveredNavigationBadge($component))
+                        ->badgeColor(static::resolveDiscoveredNavigationBadgeColor($component))
                         ->icon($component::getNavigationIcon())
                         ->sort($component::getNavigationSort() ?? 0)
                         ->url($component::getUrl());
@@ -107,6 +110,8 @@ abstract class CardsPage extends Page
                 if (is_a($component, Page::class, true) && ! is_a($component, Resource::class, true)) {
                     $item
                         ->description(static::getNavigationDescription($component))
+                        ->badge(static::resolveDiscoveredNavigationBadge($component))
+                        ->badgeColor(static::resolveDiscoveredNavigationBadgeColor($component))
                         ->sort($component::getNavigationSort() ?? 0);
                 }
 
@@ -147,6 +152,8 @@ abstract class CardsPage extends Page
 
                 return CardItem::make($pageClass)
                     ->description(static::getNavigationDescription($pageClass))
+                    ->badge(static::resolveDiscoveredNavigationBadge($pageClass))
+                    ->badgeColor(static::resolveDiscoveredNavigationBadgeColor($pageClass))
                     ->sort($pageClass::getNavigationSort() ?? 0);
             });
 
@@ -165,6 +172,30 @@ abstract class CardsPage extends Page
 
         if (property_exists($class, 'navigationDescription')) {
             return $class::$navigationDescription;
+        }
+
+        return null;
+    }
+
+    /**
+     * Try to get a navigation badge from the page/resource class.
+     */
+    protected static function resolveDiscoveredNavigationBadge(string $class): string | Htmlable | null
+    {
+        if (method_exists($class, 'getNavigationBadge')) {
+            return $class::getNavigationBadge();
+        }
+
+        return null;
+    }
+
+    /**
+     * Try to get a navigation badge color from the page/resource class.
+     */
+    protected static function resolveDiscoveredNavigationBadgeColor(string $class): string | array | null
+    {
+        if (method_exists($class, 'getNavigationBadgeColor')) {
+            return $class::getNavigationBadgeColor();
         }
 
         return null;

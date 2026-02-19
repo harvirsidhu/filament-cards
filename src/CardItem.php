@@ -40,6 +40,10 @@ class CardItem
 
     protected Alignment | string | Closure | null $alignment = null;
 
+    protected string | Htmlable | Closure | null $badge = null;
+
+    protected string | array | Closure | null $badgeColor = null;
+
     public function __construct(?string $page = null, string | Closure | null $url = null)
     {
         $this->page = $page;
@@ -89,6 +93,74 @@ class CardItem
     public function getPage(): ?string
     {
         return $this->page;
+    }
+
+    public function badge(string | Htmlable | Closure | null $badge): static
+    {
+        $this->badge = $badge;
+
+        return $this;
+    }
+
+    public function getBadge(): string | Htmlable | null
+    {
+        $badge = $this->evaluate($this->badge);
+
+        if (filled($badge)) {
+            return $badge;
+        }
+
+        if ($this->page !== null) {
+            if (method_exists($this->page, 'getNavigationBadge')) {
+                $badge = $this->page::getNavigationBadge();
+
+                if (filled($badge)) {
+                    return $badge;
+                }
+            }
+
+            if ($resource = $this->getPageResource()) {
+                if (method_exists($resource, 'getNavigationBadge')) {
+                    return $resource::getNavigationBadge();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public function badgeColor(string | array | Closure | null $badgeColor): static
+    {
+        $this->badgeColor = $badgeColor;
+
+        return $this;
+    }
+
+    public function getBadgeColor(): string | array | null
+    {
+        $badgeColor = $this->evaluate($this->badgeColor);
+
+        if (filled($badgeColor)) {
+            return $badgeColor;
+        }
+
+        if ($this->page !== null) {
+            if (method_exists($this->page, 'getNavigationBadgeColor')) {
+                $badgeColor = $this->page::getNavigationBadgeColor();
+
+                if (filled($badgeColor)) {
+                    return $badgeColor;
+                }
+            }
+
+            if ($resource = $this->getPageResource()) {
+                if (method_exists($resource, 'getNavigationBadgeColor')) {
+                    return $resource::getNavigationBadgeColor();
+                }
+            }
+        }
+
+        return null;
     }
 
     public function getLabel(): string | Htmlable | null

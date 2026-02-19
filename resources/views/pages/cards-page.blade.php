@@ -191,6 +191,8 @@
                                 $itemColor = $item->getColor();
                                 $itemIcon = $item->getIcon();
                                 $itemLabel = $item->getLabel();
+                                $itemBadge = $item->getBadge();
+                                $itemBadgeColor = $item->getBadgeColor();
                                 $itemDescription = $item->getDescription();
                                 $itemUrl = $item->getUrl();
                                 $openInNewTab = $item->shouldOpenUrlInNewTab();
@@ -287,15 +289,29 @@
                                         />
                                     @endif
 
-                                    <h5 @class([
-                                        'font-semibold text-sm text-gray-700 dark:text-gray-200',
-                                        'text-start' => $itemAlignment === Alignment::Start,
-                                        'text-center' => $itemAlignment === Alignment::Center,
-                                        'text-end' => $itemAlignment === Alignment::End,
-                                        'text-justify' => $itemAlignment === Alignment::Justify,
+                                    <div @class([
+                                        'flex w-full items-center gap-2',
+                                        'justify-start' => $itemAlignment === Alignment::Start,
+                                        'justify-center' => $itemAlignment === Alignment::Center,
+                                        'justify-end' => $itemAlignment === Alignment::End,
+                                        'justify-between' => $itemAlignment === Alignment::Justify,
                                     ])>
-                                        {{ $itemLabel }}
-                                    </h5>
+                                        <h5 @class([
+                                            'font-semibold text-sm text-gray-700 dark:text-gray-200',
+                                            'text-start' => $itemAlignment === Alignment::Start,
+                                            'text-center' => $itemAlignment === Alignment::Center,
+                                            'text-end' => $itemAlignment === Alignment::End,
+                                            'text-justify' => $itemAlignment === Alignment::Justify,
+                                        ])>
+                                            {{ $itemLabel }}
+                                        </h5>
+
+                                        @if (filled($itemBadge))
+                                            <x-filament::badge :color="$itemBadgeColor" size="sm">
+                                                {{ $itemBadge }}
+                                            </x-filament::badge>
+                                        @endif
+                                    </div>
                                 </div>
 
                                 @if (filled($itemDescription))
