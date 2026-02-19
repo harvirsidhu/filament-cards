@@ -38,6 +38,8 @@ class CardItem
 
     protected bool $openUrlInNewTab = false;
 
+    protected bool | Closure | null $isExternal = null;
+
     protected Alignment | string | Closure | null $alignment = null;
 
     protected string | Htmlable | Closure | null $badge = null;
@@ -85,9 +87,55 @@ class CardItem
         return $this;
     }
 
+    public function external(bool | Closure $condition = true): static
+    {
+        $this->isExternal = $condition;
+
+        return $this;
+    }
+
+    public function isExternal(): bool
+    {
+        if ($this->isExternal !== null) {
+            return (bool) $this->evaluate($this->isExternal);
+        }
+
+        $url = $this->getUrl();
+
+        if (! filter_var($url, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            return false;
+        }
+
+        $urlHost = parse_url($url, PHP_URL_HOST);
+
+        if (blank($urlHost)) {
+            return false;
+        }
+
+        $appUrl = config('app.url');
+
+        if (blank($appUrl)) {
+            return true;
+        }
+
+        $appHost = parse_url($appUrl, PHP_URL_HOST);
+
+        if (blank($appHost)) {
+            return true;
+        }
+
+        return strtolower((string) $urlHost) !== strtolower((string) $appHost);
+    }
+
     public function shouldOpenUrlInNewTab(): bool
     {
-        return $this->openUrlInNewTab;
+        return $this->openUrlInNewTab || $this->isExternal();
     }
 
     public function getPage(): ?string
