@@ -4,6 +4,10 @@ A Filament-native plugin that turns your pages and resources into a card-based n
 
 **Best used as a Cluster or Resource front page** that auto-discovers child pages and resources, respecting Filament's existing navigation configuration. Also works standalone as a general-purpose settings hub.
 
+## Screenshot
+
+![Filament Cards screenshot](images/screenshot.png)
+
 ## Documentation
 
 ### Index
@@ -574,12 +578,12 @@ Supports Filament widget-style responsive values:
 ```php
 class ControlPanel extends CardsPage
 {
-    protected static int $columns = 4;
+    protected static string|int|array $columns = 4;
 }
 
 class ControlPanel extends CardsPage
 {
-    protected static int | array $columns = [
+    protected static string|int|array $columns = [
         'md' => 2,
         'xl' => 4,
     ];
