@@ -2,6 +2,14 @@
 
 use Harvirsidhu\FilamentCards\CardItem;
 
+class ExternalDetectionTestPage
+{
+    public static function getUrl(): string
+    {
+        return 'https://admin.example.com/internal-page';
+    }
+}
+
 it('auto-detects external links by host', function () {
     config()->set('app.url', 'https://app.example.com');
 
@@ -46,4 +54,22 @@ it('still supports manually opening a link in a new tab', function () {
 
     expect($item->isExternal())->toBeFalse()
         ->and($item->shouldOpenUrlInNewTab())->toBeTrue();
+});
+
+it('does not mark page-based cards as external by default', function () {
+    config()->set('app.url', 'https://app.example.com');
+
+    $item = new CardItem(page: ExternalDetectionTestPage::class);
+
+    expect($item->isExternal())->toBeFalse()
+        ->and($item->shouldOpenUrlInNewTab())->toBeFalse();
+});
+
+it('does not auto-mark absolute urls as external when app url is missing', function () {
+    config()->set('app.url', null);
+
+    $item = CardItem::make('https://docs.example.com');
+
+    expect($item->isExternal())->toBeFalse()
+        ->and($item->shouldOpenUrlInNewTab())->toBeFalse();
 });

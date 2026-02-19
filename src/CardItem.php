@@ -100,6 +100,11 @@ class CardItem
             return (bool) $this->evaluate($this->isExternal);
         }
 
+        // Filament pages/resources are internal unless URL is explicitly overridden.
+        if ($this->page !== null && $this->url === null) {
+            return false;
+        }
+
         $url = $this->getUrl();
 
         if (! filter_var($url, FILTER_VALIDATE_URL)) {
@@ -121,13 +126,13 @@ class CardItem
         $appUrl = config('app.url');
 
         if (blank($appUrl)) {
-            return true;
+            return false;
         }
 
         $appHost = parse_url($appUrl, PHP_URL_HOST);
 
         if (blank($appHost)) {
-            return true;
+            return false;
         }
 
         return strtolower((string) $urlHost) !== strtolower((string) $appHost);
