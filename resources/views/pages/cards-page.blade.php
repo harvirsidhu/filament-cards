@@ -27,6 +27,82 @@
         'info' => 'text-info-500 dark:text-info-400',
         'gray' => 'text-gray-500 dark:text-gray-400',
     ];
+
+    /**
+     * Build Tailwind grid classes from a widget-style columns config.
+     *
+     * Supports:
+     * - int/string values with a progressive fallback (backward compatible)
+     * - array values keyed by breakpoints: default, sm, md, lg, xl, 2xl
+     */
+    $resolveGridColumnClasses = function (int | string | array | null $columns): array {
+        $parseColumnCount = static function (int | string | null $value): ?int {
+            if (is_int($value)) {
+                return max(1, min(12, $value));
+            }
+
+            if (is_string($value) && is_numeric($value)) {
+                return max(1, min(12, (int) $value));
+            }
+
+            return null;
+        };
+
+        // Keep legacy behavior for scalar values: progressively increase by breakpoint.
+        if (! is_array($columns)) {
+            $count = $parseColumnCount($columns) ?? 3;
+            $classes = ['grid-cols-1'];
+
+            if ($count >= 2) {
+                $classes[] = 'md:grid-cols-2';
+            }
+
+            if ($count >= 3) {
+                $classes[] = 'lg:grid-cols-3';
+            }
+
+            if ($count >= 4) {
+                $classes[] = 'xl:grid-cols-4';
+            }
+
+            if ($count >= 5) {
+                $classes[] = "2xl:grid-cols-{$count}";
+            }
+
+            return $classes;
+        }
+
+        $breakpointPrefixes = [
+            'default' => '',
+            'sm' => 'sm:',
+            'md' => 'md:',
+            'lg' => 'lg:',
+            'xl' => 'xl:',
+            '2xl' => '2xl:',
+        ];
+
+        $classes = [];
+
+        foreach ($breakpointPrefixes as $breakpoint => $prefix) {
+            $columnCount = $parseColumnCount($columns[$breakpoint] ?? null);
+
+            if ($columnCount === null) {
+                continue;
+            }
+
+            $classes[] = "{$prefix}grid-cols-{$columnCount}";
+        }
+
+        if (empty($classes)) {
+            return ['grid-cols-1'];
+        }
+
+        if (! array_key_exists('default', $columns)) {
+            array_unshift($classes, 'grid-cols-1');
+        }
+
+        return array_values(array_unique($classes));
+    };
 @endphp
 
 <x-filament-panels::page>
@@ -35,6 +111,7 @@
             @php
                 $groupLabel = $group->getLabel();
                 $groupColumns = $group->getColumns() ?? $pageColumns;
+                $groupGridColumnClasses = $resolveGridColumnClasses($groupColumns);
                 $groupItems = $group->getItems();
                 $isCollapsible = $group->isCollapsible();
                 $isCollapsed = $group->isCollapsed();
@@ -102,10 +179,8 @@
                             x-collapse
                         @endif
                         @class([
-                            'grid grid-cols-1',
-                            'md:grid-cols-2' => $groupColumns >= 2,
-                            'lg:grid-cols-3' => $groupColumns >= 3,
-                            'xl:grid-cols-4' => $groupColumns >= 4,
+                            'grid',
+                            ...$groupGridColumnClasses,
                             'gap-3' => $isCompact,
                             'gap-4' => ! $isCompact,
                         ])
@@ -120,6 +195,7 @@
                                 $itemUrl = $item->getUrl();
                                 $openInNewTab = $item->shouldOpenUrlInNewTab();
                                 $columnSpan = $item->getColumnSpan();
+                                $itemAlignment = $item->getAlignment() ?? $alignment;
 
                                 $borderColorClass = $itemColor ? ($colorMap[$itemColor] ?? '') : '';
                                 $iconHoverColorClass = $itemColor
@@ -152,9 +228,9 @@
                                         'p-3' => $isCompact,
                                         'p-4' => ! $isCompact,
                                         $spanClasses,
-                                        'items-start' => $alignment === Alignment::Start,
-                                        'items-center' => $alignment === Alignment::Center,
-                                        'items-end' => $alignment === Alignment::End,
+                                        'items-start' => $itemAlignment === Alignment::Start,
+                                        'items-center' => $itemAlignment === Alignment::Center,
+                                        'items-end' => $itemAlignment === Alignment::End,
                                     ]) }}
                                 >
                             @else
@@ -170,9 +246,9 @@
                                         'p-3' => $isCompact,
                                         'p-4' => ! $isCompact,
                                         $spanClasses,
-                                        'items-start' => $alignment === Alignment::Start,
-                                        'items-center' => $alignment === Alignment::Center,
-                                        'items-end' => $alignment === Alignment::End,
+                                        'items-start' => $itemAlignment === Alignment::Start,
+                                        'items-center' => $itemAlignment === Alignment::Center,
+                                        'items-end' => $itemAlignment === Alignment::End,
                                     ]) }}
                                 >
                             @endif
@@ -182,8 +258,8 @@
                                         icon="heroicon-s-arrow-top-right-on-square"
                                         @class([
                                             'absolute top-3 h-3.5 w-3.5 text-gray-400 dark:text-gray-500',
-                                            'right-3' => $alignment !== Alignment::End,
-                                            'left-3' => $alignment === Alignment::End,
+                                            'right-3' => $itemAlignment !== Alignment::End,
+                                            'left-3' => $itemAlignment === Alignment::End,
                                         ])
                                     />
                                 @endif
@@ -194,9 +270,9 @@
                                     'flex-col-reverse' => ! $isIconInlined && $iconPosition === IconPosition::After,
                                     'flex-row items-center' => $isIconInlined && $iconPosition === IconPosition::Before,
                                     'flex-row-reverse items-center' => $isIconInlined && $iconPosition === IconPosition::After,
-                                    'items-start' => ! $isIconInlined && $alignment === Alignment::Start,
-                                    'items-center' => ! $isIconInlined && $alignment === Alignment::Center,
-                                    'items-end' => ! $isIconInlined && $alignment === Alignment::End,
+                                    'items-start' => ! $isIconInlined && $itemAlignment === Alignment::Start,
+                                    'items-center' => ! $isIconInlined && $itemAlignment === Alignment::Center,
+                                    'items-end' => ! $isIconInlined && $itemAlignment === Alignment::End,
                                 ])>
                                     @if (filled($itemIcon))
                                         <x-filament::icon
@@ -213,9 +289,10 @@
 
                                     <h5 @class([
                                         'font-semibold text-sm text-gray-700 dark:text-gray-200',
-                                        'text-start' => $alignment === Alignment::Start,
-                                        'text-center' => $alignment === Alignment::Center,
-                                        'text-end' => $alignment === Alignment::End,
+                                        'text-start' => $itemAlignment === Alignment::Start,
+                                        'text-center' => $itemAlignment === Alignment::Center,
+                                        'text-end' => $itemAlignment === Alignment::End,
+                                        'text-justify' => $itemAlignment === Alignment::Justify,
                                     ])>
                                         {{ $itemLabel }}
                                     </h5>
@@ -224,9 +301,10 @@
                                 @if (filled($itemDescription))
                                     <p @class([
                                         'text-sm text-gray-500 dark:text-gray-400',
-                                        'text-start' => $alignment === Alignment::Start,
-                                        'text-center' => $alignment === Alignment::Center,
-                                        'text-end' => $alignment === Alignment::End,
+                                        'text-start' => $itemAlignment === Alignment::Start,
+                                        'text-center' => $itemAlignment === Alignment::Center,
+                                        'text-end' => $itemAlignment === Alignment::End,
+                                        'text-justify' => $itemAlignment === Alignment::Justify,
                                     ])>
                                         {{ $itemDescription }}
                                     </p>

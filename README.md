@@ -378,6 +378,17 @@ CardItem::make(CompanySettings::class)
     ->openUrlInNewTab()
 ```
 
+### `alignment()`
+
+Control the text alignment of the card content. Options: `Start`, `Center`, `End`, `Justify`:
+
+```php
+use Filament\Support\Enums\Alignment;
+
+CardItem::make(CompanySettings::class)
+    ->alignment(Alignment::Center)
+```
+
 ### `visible()` and `hidden()`
 
 Control card visibility. Accepts a boolean or Closure:
@@ -485,11 +496,19 @@ CardGroup::make('General')
 
 ### `columns()`
 
-Override the grid columns for this specific group:
+Override the grid columns for this specific group.
+You can use a single integer, or a responsive array (same style as Filament widgets):
 
 ```php
 CardGroup::make('Wide Cards')
     ->columns(2)
+    ->schema([...])
+
+CardGroup::make('Wide Cards')
+    ->columns([
+        'md' => 2,
+        'xl' => 4,
+    ])
     ->schema([...])
 ```
 
@@ -549,18 +568,27 @@ Customize the CardsPage with static properties:
 
 ### `$columns`
 
-Default number of grid columns (default: `3`):
+Default number of grid columns (default: `3`).
+Supports Filament widget-style responsive values:
 
 ```php
 class ControlPanel extends CardsPage
 {
     protected static int $columns = 4;
 }
+
+class ControlPanel extends CardsPage
+{
+    protected static int | array $columns = [
+        'md' => 2,
+        'xl' => 4,
+    ];
+}
 ```
 
 ### `$itemsAlignment`
 
-Alignment of card content. Options: `Start`, `Center`, `End` (default: `Start`):
+Alignment of card content. Options: `Start`, `Center`, `End`, `Justify` (default: `Center`):
 
 ```php
 use Filament\Support\Enums\Alignment;
@@ -681,7 +709,7 @@ class SettingsHub extends CardsPage
 {
     protected static ?string $navigationIcon = 'heroicon-o-cog-8-tooth';
     protected static int $columns = 3;
-    protected static Alignment $itemsAlignment = Alignment::Start;
+    protected static Alignment $itemsAlignment = Alignment::Center;
     protected static IconSize $iconSize = IconSize::Medium;
     protected static IconPosition $iconPosition = IconPosition::Before;
 

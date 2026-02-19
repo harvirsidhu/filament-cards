@@ -18,9 +18,9 @@ abstract class CardsPage extends Page
 {
     protected string $view = 'harvirsidhu-filament-cards::pages.cards-page';
 
-    protected static int $columns = 3;
+    protected static int | string | array $columns = 3;
 
-    protected static Alignment $itemsAlignment = Alignment::Start;
+    protected static Alignment $itemsAlignment = Alignment::Center;
 
     protected static bool $iconInlined = false;
 

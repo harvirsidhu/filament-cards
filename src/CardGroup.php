@@ -22,7 +22,7 @@ class CardGroup
     /** @var array<CardItem> */
     protected array $schema = [];
 
-    protected int | Closure | null $columns = null;
+    protected int | string | array | Closure | null $columns = null;
 
     protected bool $isCollapsible = false;
 
@@ -50,7 +50,7 @@ class CardGroup
         return $this;
     }
 
-    public function columns(int | Closure | null $columns): static
+    public function columns(int | string | array | Closure | null $columns): static
     {
         $this->columns = $columns;
 
@@ -94,7 +94,7 @@ class CardGroup
         return $this->isCompact;
     }
 
-    public function getColumns(): ?int
+    public function getColumns(): int | string | array | null
     {
         return $this->evaluate($this->columns);
     }
