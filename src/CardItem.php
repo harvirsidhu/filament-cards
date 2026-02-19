@@ -38,8 +38,6 @@ class CardItem
 
     protected bool $openUrlInNewTab = false;
 
-    protected bool | Closure | null $isExternal = null;
-
     protected Alignment | string | Closure | null $alignment = null;
 
     protected string | Htmlable | Closure | null $badge = null;
@@ -87,60 +85,9 @@ class CardItem
         return $this;
     }
 
-    public function external(bool | Closure $condition = true): static
-    {
-        $this->isExternal = $condition;
-
-        return $this;
-    }
-
-    public function isExternal(): bool
-    {
-        if ($this->isExternal !== null) {
-            return (bool) $this->evaluate($this->isExternal);
-        }
-
-        // Filament pages/resources are internal unless URL is explicitly overridden.
-        if ($this->page !== null && $this->url === null) {
-            return false;
-        }
-
-        $url = $this->getUrl();
-
-        if (! filter_var($url, FILTER_VALIDATE_URL)) {
-            return false;
-        }
-
-        $scheme = parse_url($url, PHP_URL_SCHEME);
-
-        if (! in_array($scheme, ['http', 'https'], true)) {
-            return false;
-        }
-
-        $urlHost = parse_url($url, PHP_URL_HOST);
-
-        if (blank($urlHost)) {
-            return false;
-        }
-
-        $appUrl = config('app.url');
-
-        if (blank($appUrl)) {
-            return false;
-        }
-
-        $appHost = parse_url($appUrl, PHP_URL_HOST);
-
-        if (blank($appHost)) {
-            return false;
-        }
-
-        return strtolower((string) $urlHost) !== strtolower((string) $appHost);
-    }
-
     public function shouldOpenUrlInNewTab(): bool
     {
-        return $this->openUrlInNewTab || $this->isExternal();
+        return $this->openUrlInNewTab;
     }
 
     public function getPage(): ?string

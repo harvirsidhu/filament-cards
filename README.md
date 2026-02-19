@@ -394,7 +394,7 @@ CardItem::make('/path')
     ->icon('heroicon-o-building-office')
 ```
 
-### `url()`, `openUrlInNewTab()`, and `external()`
+### `url()` and `openUrlInNewTab()`
 
 Override the URL or open in a new tab:
 
@@ -403,15 +403,6 @@ CardItem::make(CompanySettings::class)
     ->url('https://custom-url.com')
     ->openUrlInNewTab()
 ```
-
-Mark a card as external explicitly (shows the external-link indicator and opens in a new tab):
-
-```php
-CardItem::make('/docs')
-    ->external()
-```
-
-By default, absolute `http/https` URLs are auto-detected as external when their host differs from `config('app.url')`.
 
 ### `alignment()`
 

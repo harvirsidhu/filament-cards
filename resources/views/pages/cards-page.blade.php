@@ -195,7 +195,6 @@
                                 $itemBadgeColor = $item->getBadgeColor();
                                 $itemDescription = $item->getDescription();
                                 $itemUrl = $item->getUrl();
-                                $itemIsExternal = $item->isExternal();
                                 $openInNewTab = $item->shouldOpenUrlInNewTab();
                                 $columnSpan = $item->getColumnSpan();
                                 $itemAlignment = $item->getAlignment() ?? $alignment;
@@ -239,7 +238,7 @@
                             @else
                                 <a
                                     href="{{ $itemUrl }}"
-                                    @if ($openInNewTab) target="_blank" rel="noopener noreferrer" @endif
+                                    @if ($openInNewTab) target="_blank" @endif
                                     {{ $item->getExtraAttributeBag()->class([
                                         'group relative flex flex-col gap-2 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5',
                                         'dark:bg-gray-900 dark:ring-white/10',
@@ -256,11 +255,11 @@
                                 >
                             @endif
 
-                                @if ($itemIsExternal && ! $isDisabled)
+                                @if ($openInNewTab && ! $isDisabled)
                                     <x-filament::icon
                                         icon="heroicon-s-arrow-top-right-on-square"
                                         @class([
-                                            'absolute top-3 h-3.5 w-3.5 text-gray-400/75 transition duration-150 group-hover:text-gray-500 dark:text-gray-500/75 dark:group-hover:text-gray-400',
+                                            'absolute top-3 h-3.5 w-3.5 text-gray-400 dark:text-gray-500',
                                             'right-3' => $itemAlignment !== Alignment::End,
                                             'left-3' => $itemAlignment === Alignment::End,
                                         ])
@@ -306,10 +305,6 @@
                                         ])>
                                             {{ $itemLabel }}
                                         </h5>
-
-                                        @if ($itemIsExternal && ! $isDisabled)
-                                            <span class="sr-only">{{ __('Opens in new tab') }}</span>
-                                        @endif
 
                                         @if (filled($itemBadge))
                                             <x-filament::badge :color="$itemBadgeColor" size="sm">
