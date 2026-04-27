@@ -2,6 +2,7 @@
     use Filament\Support\Enums\Alignment;
     use Filament\Support\Enums\IconPosition;
     use Filament\Support\Enums\IconSize;
+    use function Filament\Support\generate_href_html;
 
     $iconSizeClass = match ($iconSize) {
         IconSize::Small => 'w-6 h-6',
@@ -237,8 +238,7 @@
                                 >
                             @else
                                 <a
-                                    href="{{ $itemUrl }}"
-                                    @if ($openInNewTab) target="_blank" @endif
+                                    {{ generate_href_html($itemUrl, $openInNewTab) }}
                                     {{ $item->getExtraAttributeBag()->class([
                                         'group relative flex flex-col gap-2 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5',
                                         'dark:bg-gray-900 dark:ring-white/10',
