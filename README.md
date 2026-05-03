@@ -39,6 +39,7 @@ A Filament-native plugin that turns your pages and resources into a card-based n
 - **Flexible visibility** using component-level methods/properties or page-level include/exclude hooks.
 - **Manual + discovered cards together** so you can combine internal routes and external links.
 - **Dynamic registration** for modular apps and package-driven extension points.
+- **Optional client-side search** to filter cards by label, description, and badge — useful for hubs with many cards.
 
 ## Requirements
 
@@ -480,6 +481,40 @@ CardItem::make(CompanySettings::class)->columnSpan([
 ])
 ```
 
+### `searchKeywords()`
+
+Add extra keywords used by the page search (`$searchable = true` on the CardsPage). The keywords are included in the search corpus alongside the label, description, and badge — useful for adding aliases, jargon, or related terms users might type instead of the visible label:
+
+```php
+CardItem::make(BillingSettings::class)
+    ->searchKeywords(['invoices', 'payments', 'subscriptions', 'finance'])
+
+// Single string also accepted
+CardItem::make(CompanySettings::class)
+    ->searchKeywords('organisation')
+
+// Closure form
+CardItem::make(LegacyTools::class)
+    ->searchKeywords(fn () => $this->resolveLegacyAliases())
+```
+
+Keywords are not displayed anywhere — they only affect search matching.
+
+**Auto-Discovery:** If you are using `discoverClusterCards()` or `discoverResourceCards()`, you can declare keywords on the page/resource instead:
+
+```php
+class CompanySettings extends Page
+{
+    public static array $filamentCardsSearchKeywords = ['organisation', 'org'];
+
+    // …or as a method:
+    public static function getFilamentCardsSearchKeywords(): array
+    {
+        return ['organisation', 'org'];
+    }
+}
+```
+
 ### `extraAttributes()`
 
 Add custom HTML attributes to the card element:
@@ -659,6 +694,31 @@ use Filament\Support\Enums\IconPosition;
 class ControlPanel extends CardsPage
 {
     protected static IconPosition $iconPosition = IconPosition::After;
+}
+```
+
+### `$searchable`
+
+Render a search bar at the top right of the page that filters cards live by label, description, and badge text. Empty groups (no matching items) are hidden automatically. Off by default:
+
+```php
+class ControlPanel extends CardsPage
+{
+    protected static bool $searchable = true;
+}
+```
+
+Filtering happens client-side via Alpine.js — no server round-trips.
+
+### `$searchPlaceholder`
+
+Override the placeholder text on the search input. Only takes effect when `$searchable = true`:
+
+```php
+class ControlPanel extends CardsPage
+{
+    protected static bool $searchable = true;
+    protected static ?string $searchPlaceholder = 'Find a tool...';
 }
 ```
 
