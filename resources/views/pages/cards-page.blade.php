@@ -107,7 +107,43 @@
 @endphp
 
 <x-filament-panels::page>
-    <div class="space-y-6">
+    <div @if ($isSearchable) x-data="{ q: '' }" @endif>
+        @if ($isSearchable)
+            <div class="flex justify-end mb-4">
+                <div class="relative w-full sm:w-72">
+                    <x-filament::input.wrapper
+                        inline-prefix
+                        prefix-icon="heroicon-m-magnifying-glass"
+                    >
+                        <x-filament::input
+                            type="text"
+                            inlinePrefix
+                            autocomplete="off"
+                            x-model.debounce.150ms="q"
+                            placeholder="{{ $searchPlaceholder }}"
+                            class="pe-9"
+                        />
+                    </x-filament::input.wrapper>
+
+                    <button
+                        type="button"
+                        x-show="q.length > 0"
+                        x-cloak
+                        x-on:click="q = ''"
+                        x-transition.opacity.duration.100ms
+                        class="absolute inset-y-0 end-0 flex items-center pe-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                        aria-label="Clear search"
+                    >
+                        <x-filament::icon
+                            icon="heroicon-m-x-mark"
+                            class="h-4 w-4"
+                        />
+                    </button>
+                </div>
+            </div>
+        @endif
+
+        <div class="space-y-6">
         @foreach ($groups as $group)
             @php
                 $groupLabel = $group->getLabel();
@@ -125,6 +161,9 @@
                 <div
                     @if ($isCollapsible)
                         x-data="{ collapsed: {{ $isCollapsed ? 'true' : 'false' }} }"
+                    @endif
+                    @if ($isSearchable)
+                        x-show="!q || [...$el.querySelectorAll('[data-search-text]')].some(el => el.dataset.searchText.includes(q.toLowerCase()))"
                     @endif
                     {{ $group->getExtraAttributeBag()->class(['space-y-3']) }}
                 >
@@ -218,10 +257,23 @@
                                         $spanClasses = 'lg:col-span-' . $lgSpan;
                                     }
                                 }
+
+                                $itemSearchText = $isSearchable
+                                    ? strtolower(trim(strip_tags(
+                                        (string) $itemLabel . ' '
+                                        . (string) $itemDescription . ' '
+                                        . (string) $itemBadge . ' '
+                                        . implode(' ', $item->getSearchKeywords())
+                                    )))
+                                    : '';
                             @endphp
 
                             @if ($isDisabled)
                                 <div
+                                    @if ($isSearchable)
+                                        data-search-text="{{ $itemSearchText }}"
+                                        x-show="!q || $el.dataset.searchText.includes(q.toLowerCase())"
+                                    @endif
                                     {{ $item->getExtraAttributeBag()->class([
                                         'group relative flex flex-col gap-2 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5',
                                         'dark:bg-gray-900 dark:ring-white/10',
@@ -239,6 +291,10 @@
                             @else
                                 <a
                                     {{ generate_href_html($itemUrl, $openInNewTab) }}
+                                    @if ($isSearchable)
+                                        data-search-text="{{ $itemSearchText }}"
+                                        x-show="!q || $el.dataset.searchText.includes(q.toLowerCase())"
+                                    @endif
                                     {{ $item->getExtraAttributeBag()->class([
                                         'group relative flex flex-col gap-2 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5',
                                         'dark:bg-gray-900 dark:ring-white/10',
@@ -336,5 +392,6 @@
                 </div>
             @endif
         @endforeach
+        </div>
     </div>
 </x-filament-panels::page>

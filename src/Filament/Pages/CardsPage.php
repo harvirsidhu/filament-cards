@@ -29,6 +29,10 @@ abstract class CardsPage extends Page
 
     protected static IconPosition $iconPosition = IconPosition::Before;
 
+    protected static bool $searchable = false;
+
+    protected static ?string $searchPlaceholder = null;
+
     /** @var array<class-string> */
     protected static array $excludedClusterComponents = [];
 
@@ -339,6 +343,8 @@ abstract class CardsPage extends Page
             'isIconInlined' => static::$iconInlined,
             'iconSize' => static::$iconSize,
             'iconPosition' => static::$iconPosition,
+            'isSearchable' => static::$searchable,
+            'searchPlaceholder' => static::$searchPlaceholder ?? __('Search...'),
         ];
     }
 

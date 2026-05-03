@@ -44,6 +44,8 @@ class CardItem
 
     protected string | array | Closure | null $badgeColor = null;
 
+    protected string | array | Closure | null $searchKeywords = null;
+
     public function __construct(?string $page = null, string | Closure | null $url = null)
     {
         $this->page = $page;
@@ -161,6 +163,38 @@ class CardItem
         }
 
         return null;
+    }
+
+    public function searchKeywords(string | array | Closure | null $keywords): static
+    {
+        $this->searchKeywords = $keywords;
+
+        return $this;
+    }
+
+    /**
+     * @return array<string>
+     */
+    public function getSearchKeywords(): array
+    {
+        $keywords = $this->evaluate($this->searchKeywords);
+
+        if (blank($keywords) && $this->page !== null) {
+            if (method_exists($this->page, 'getFilamentCardsSearchKeywords')) {
+                $keywords = $this->page::getFilamentCardsSearchKeywords();
+            } elseif (property_exists($this->page, 'filamentCardsSearchKeywords')) {
+                $keywords = $this->page::$filamentCardsSearchKeywords;
+            }
+        }
+
+        if (blank($keywords)) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_map('trim', is_array($keywords) ? $keywords : [$keywords]),
+            fn (string $keyword): bool => $keyword !== '',
+        ));
     }
 
     public function getLabel(): string | Htmlable | null
