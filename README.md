@@ -1,85 +1,100 @@
 # Filament Cards
 
-A Filament-native plugin that turns your pages and resources into a card-based navigation hub. Built to feel like it belongs in Filament's core -- uses the same API patterns (`label`, `schema`, `columnSpan`, `visible`/`hidden`) and integrates natively with Clusters and Resources.
+Turn any Filament page into a card-based navigation hub — perfect for **Settings hubs**, **Cluster front pages**, **Resource dashboards**, or any place you want a clean grid of links instead of a sidebar tree.
 
-**Best used as a Cluster or Resource front page** that auto-discovers child pages and resources, respecting Filament's existing navigation configuration. Also works standalone as a general-purpose settings hub.
-
-## Screenshot
+It feels like part of Filament: same API patterns (`label`, `schema`, `columnSpan`, `visible`/`hidden`), respects your existing navigation config, and auto-discovers Cluster/Resource pages with full authorization checks.
 
 ![Filament Cards screenshot](images/screenshot.png)
 
-## Documentation
+---
 
-### Index
+## Table of Contents
 
-- [Requirements](#requirements)
-- [Installation](#installation)
-  - [Theme Setup](#theme-setup)
-- [Quick Start (Manual Cards)](#quick-start-manual-cards)
-- [Use Case: Cluster Front Page (Primary)](#use-case-cluster-front-page-primary)
-  - [`discoverClusterCards()`](#discoverclustercards)
-  - [Hiding Auto-Discovered Cards](#hiding-auto-discovered-cards)
-  - [Grouping Auto-Discovered Cards](#grouping-auto-discovered-cards)
-  - [Mixing Auto-Discovered and Manual Cards](#mixing-auto-discovered-and-manual-cards)
-- [Use Case: Resource Hub](#use-case-resource-hub)
-- [Use Case: Standalone Page](#use-case-standalone-page)
-- [API Reference: CardItem](#api-reference-carditem)
-- [API Reference: CardGroup](#api-reference-cardgroup)
-- [API Reference: CardsPage Configuration](#api-reference-cardspage-configuration)
-- [Advanced: Dynamic Registration](#advanced-dynamic-registration)
-- [Full Example (Putting It All Together)](#full-example-putting-it-all-together)
-- [Optional: Filament Plugin Registration](#optional-filament-plugin-registration)
-- [License](#license)
+1. [Why use this?](#why-use-this)
+2. [Which approach fits your case?](#which-approach-fits-your-case)
+3. [Requirements](#requirements)
+4. [Installation](#installation)
+5. [60-Second Quick Start](#60-second-quick-start)
+6. [Use Case A — Cluster Front Page (most common)](#use-case-a--cluster-front-page-most-common)
+7. [Use Case B — Resource Hub](#use-case-b--resource-hub)
+8. [Use Case C — Standalone Settings Page](#use-case-c--standalone-settings-page)
+9. [API Reference — `CardItem`](#api-reference--carditem)
+10. [API Reference — `CardGroup`](#api-reference--cardgroup)
+11. [API Reference — `CardsPage` Configuration](#api-reference--cardspage-configuration)
+12. [API Reference — Page/Resource Hooks (for auto-discovery)](#api-reference--pageresource-hooks-for-auto-discovery)
+13. [Advanced — Dynamic Registration](#advanced--dynamic-registration)
+14. [Advanced — Custom Discovery Filtering](#advanced--custom-discovery-filtering)
+15. [Full Example](#full-example)
+16. [Optional — Plugin Registration](#optional--plugin-registration)
+17. [License](#license)
 
-### Feature Overview
+---
 
-- **Auto-discovery** for Cluster and Resource pages with built-in authorization checks.
-- **Filament-native API** (`label`, `description`, `schema`, `visible`, `hidden`, etc.).
-- **Grouping and layout controls** via `CardGroup`, columns, spans, compact mode, and collapse behavior.
-- **Flexible visibility** using component-level methods/properties or page-level include/exclude hooks.
-- **Manual + discovered cards together** so you can combine internal routes and external links.
-- **Dynamic registration** for modular apps and package-driven extension points.
-- **Optional client-side search** to filter cards by label, description, and badge — useful for hubs with many cards.
+## Why use this?
+
+| Feature | What it gives you |
+| --- | --- |
+| **Auto-discovery** | Reads pages/resources in a Cluster (or Resource) and creates cards automatically — no manual list to maintain. |
+| **Filament-native API** | `label`, `description`, `schema`, `visible`, `hidden`, `columnSpan` — same patterns you already use. |
+| **Authorization-aware** | Calls `canAccess()` on each component before rendering. |
+| **Grouping & layout** | `CardGroup`, columns, spans, compact mode, collapsible sections. |
+| **Flexible visibility** | Per-card or per-page hooks; central exclude lists; closure-based conditions. |
+| **Manual + discovered** | Mix auto-discovered cards with hand-crafted ones (e.g., external links). |
+| **Dynamic registration** | Add cards from service providers — useful for modular apps and packages. |
+| **Client-side search** | Optional live search that filters by label, description, badge, and custom keywords. |
+
+## Which approach fits your case?
+
+| Your situation | Use this |
+| --- | --- |
+| You have a **Cluster** with several pages and want a landing page | [Cluster Front Page](#use-case-a--cluster-front-page-most-common) |
+| You have a **Resource** with many custom pages | [Resource Hub](#use-case-b--resource-hub) |
+| You just want a generic **settings/control panel** with manual cards | [Standalone Page](#use-case-c--standalone-settings-page) |
+| You want to **add cards from a package or module** | [Dynamic Registration](#advanced--dynamic-registration) |
+
+---
 
 ## Requirements
 
-- PHP 8.2+
-- Laravel 11+
-- Filament v4 or v5
+- PHP **8.2+**
+- Laravel **11+**
+- Filament **v4 or v5**
 
 ## Installation
 
-Install via Composer:
+Install the package via Composer:
 
 ```bash
 composer require harvirsidhu/filament-cards
 ```
 
-### Theme Setup
+### Theme setup (required for styling)
 
-Since the plugin uses Tailwind CSS classes, add the plugin's views to your theme.
+The plugin uses Tailwind classes, so add its views to your Filament theme so Tailwind picks them up.
 
-**For Filament v4.x / v5.x**, add this line to your `theme.css`:
+In your `theme.css`, add:
 
 ```css
 @source '../../../../vendor/harvirsidhu/filament-cards/resources/views';
 ```
 
-Then rebuild your assets:
+Then rebuild assets:
 
 ```bash
 npm run build
 ```
 
-## Quick Start (Manual Cards)
+---
 
-The simplest possible cards page in 10 lines:
+## 60-Second Quick Start
+
+The smallest possible cards page:
 
 ```php
 namespace App\Filament\Pages;
 
-use Harvirsidhu\FilamentCards\Filament\Pages\CardsPage;
 use Harvirsidhu\FilamentCards\CardItem;
+use Harvirsidhu\FilamentCards\Filament\Pages\CardsPage;
 
 class ControlPanel extends CardsPage
 {
@@ -95,11 +110,15 @@ class ControlPanel extends CardsPage
 }
 ```
 
-## Use Case: Cluster Front Page (Primary)
+That's it — Filament will pick up your new page, and clicking each card navigates to the linked page.
 
-The most powerful way to use this plugin is as the **front page of a Cluster**. Auto-discovery reads all pages and resources in the cluster and creates cards automatically.
+---
 
-### Step 1: Define the Cluster
+## Use Case A — Cluster Front Page (most common)
+
+The most powerful pattern: a CardsPage that **automatically lists every page and resource in its Cluster**.
+
+### Step 1 — Define the Cluster
 
 ```php
 namespace App\Filament\Clusters;
@@ -112,7 +131,7 @@ class Settings extends Cluster
 }
 ```
 
-### Step 2: Create the CardsPage
+### Step 2 — Create the front-page CardsPage
 
 ```php
 namespace App\Filament\Clusters\Settings\Pages;
@@ -123,7 +142,7 @@ use Harvirsidhu\FilamentCards\Filament\Pages\CardsPage;
 class SettingsHub extends CardsPage
 {
     protected static ?string $cluster = Settings::class;
-    protected static ?int $navigationSort = -1;
+    protected static ?int $navigationSort = -1; // Show first in the cluster
 
     protected static function getCards(): array
     {
@@ -132,47 +151,38 @@ class SettingsHub extends CardsPage
 }
 ```
 
-### Step 3: Your Cluster Pages Work as Normal
+### Step 3 — Your other Cluster pages need no changes
 
-No extra traits or changes needed on any of your pages.
-
-To add a description to the card, simply add a `$navigationDescription` property to your page class:
+Your existing pages just work. To add a description on the card, add a single property:
 
 ```php
-namespace App\Filament\Clusters\Settings\Pages;
-
-use Filament\Pages\Page;
-use App\Filament\Clusters\Settings;
-
 class CompanySettings extends Page
 {
     protected static ?string $cluster = Settings::class;
     protected static ?string $navigationIcon = 'heroicon-o-building-office';
 
-    // Optional: Add a description to the card
     public static ?string $navigationDescription = 'Manage company name, address, and branding.';
 }
 ```
 
-**Breadcrumbs work automatically:** `Dashboard > Settings > Company Settings`. Filament's cluster breadcrumb system handles everything -- no custom traits needed.
+Breadcrumbs (`Dashboard > Settings > Company Settings`) work automatically.
 
-### `discoverClusterCards()`
+### What `discoverClusterCards()` does
 
-1. Reads all pages and resources registered to the Cluster
-2. Excludes the CardsPage itself
-3. Checks `canAccess()` on each component (respects authorization)
-4. Checks cards visibility via `showInFilamentCards()` or `$showInFilamentCards` (if defined on the component), otherwise falls back to `shouldRegisterNavigation()`
-5. Uses each page's `$navigationLabel`, `$navigationIcon`, and URL
-6. Reads `getNavigationBadge()` / `getNavigationBadgeColor()` when available
-7. **New:** Checks for `$navigationDescription` property (or `getNavigationDescription()` method) on the page class
-8. Groups cards by `getFilamentCardsGroup()` / `$filamentCardsGroup` (if defined), otherwise falls back to `$navigationGroup`
-9. Sorts by `$navigationSort`
+In order, for every component registered to the Cluster:
 
-### Hiding Auto-Discovered Cards
+1. Skips the CardsPage itself.
+2. Calls `canAccess()` (respects authorization).
+3. Checks `showInFilamentCards()` / `$showInFilamentCards` — falls back to `shouldRegisterNavigation()`.
+4. Reads `$navigationLabel`, `$navigationIcon`, and the resolved URL.
+5. Reads `getNavigationBadge()` / `getNavigationBadgeColor()` if defined.
+6. Reads `$navigationDescription` (or `getNavigationDescription()`) if defined.
+7. Groups by `getFilamentCardsGroup()` / `$filamentCardsGroup` — falls back to `$navigationGroup`.
+8. Sorts each group by `$navigationSort`.
 
-You can hide a Page/Resource from auto-discovery in two ways.
+### Hiding a card from auto-discovery
 
-#### 1) On the Page/Resource itself (recommended)
+**Option 1 — on the Page/Resource (recommended):**
 
 ```php
 class InternalToolsPage extends Page
@@ -182,18 +192,15 @@ class InternalToolsPage extends Page
         return false;
     }
 }
-```
 
-Or with a static property:
-
-```php
+// or as a property
 class AuditLogsResource extends Resource
 {
     public static bool $showInFilamentCards = false;
 }
 ```
 
-To force-show a component in cards even if `shouldRegisterNavigation()` is `false`:
+**To force-show a page that's hidden from the sidebar:**
 
 ```php
 class HiddenFromSidebarPage extends Page
@@ -210,7 +217,7 @@ class HiddenFromSidebarPage extends Page
 }
 ```
 
-#### 2) On the CardsPage (central control)
+**Option 2 — central exclude list on the CardsPage:**
 
 ```php
 class SettingsHub extends CardsPage
@@ -222,11 +229,7 @@ class SettingsHub extends CardsPage
 }
 ```
 
-### Grouping Auto-Discovered Cards
-
-By default, discovered cards use each component's navigation group (`getNavigationGroup()` / `$navigationGroup`).
-
-If you want a different group just for cards, define it on the Page/Resource:
+### Custom group name (different from the sidebar)
 
 ```php
 class CompanySettings extends Page
@@ -236,18 +239,15 @@ class CompanySettings extends Page
         return 'Business Settings';
     }
 }
-```
 
-Or with a static property:
-
-```php
+// or property form
 class BillingResource extends Resource
 {
     public static ?string $filamentCardsGroup = 'Finance';
 }
 ```
 
-### Mixing Auto-Discovered and Manual Cards
+### Mixing discovered cards with manual ones
 
 ```php
 protected static function getCards(): array
@@ -266,9 +266,11 @@ protected static function getCards(): array
 }
 ```
 
-## Use Case: Resource Hub
+---
 
-When a Resource has many custom pages, use `discoverResourceCards()` to auto-create cards for each:
+## Use Case B — Resource Hub
+
+When a Resource has many custom pages, use `discoverResourceCards()` to auto-create a card for each:
 
 ```php
 namespace App\Filament\Resources\UserResource\Pages;
@@ -287,13 +289,23 @@ class UserSettingsHub extends CardsPage
 }
 ```
 
-## Use Case: Standalone Page
-
-Without a Cluster or Resource, define cards manually:
+Same hooks (`showInFilamentCards`, `$navigationDescription`, etc.) work here. To exclude specific pages:
 
 ```php
-use Harvirsidhu\FilamentCards\CardItem;
+protected static array $excludedResourcePages = [
+    UserResource\Pages\DangerZone::class,
+];
+```
+
+---
+
+## Use Case C — Standalone Settings Page
+
+No Cluster, no Resource — just a manually-curated cards page:
+
+```php
 use Harvirsidhu\FilamentCards\CardGroup;
+use Harvirsidhu\FilamentCards\CardItem;
 use Harvirsidhu\FilamentCards\Filament\Pages\CardsPage;
 
 class ControlPanel extends CardsPage
@@ -320,20 +332,39 @@ class ControlPanel extends CardsPage
 }
 ```
 
-## API Reference: CardItem
+---
 
-### Creating a Card Item
+## API Reference — `CardItem`
 
-Pass a Filament Page class, Resource class, or a URL string:
+`CardItem` represents a single clickable card. Pass a Filament Page class, Resource class, or a URL string:
 
 ```php
 CardItem::make(CompanySettings::class)  // Filament Page
 CardItem::make(UserResource::class)     // Filament Resource
-CardItem::make('/custom/path')          // URL string
+CardItem::make('/custom/path')          // Internal URL
 CardItem::make('https://example.com')   // External URL
 ```
 
-When a Page or Resource class is passed, the card automatically resolves its `label`, `icon`, `badge`, `badgeColor`, and `url` from the class's navigation properties.
+When given a Page/Resource class, the card auto-resolves `label`, `icon`, `badge`, `badgeColor`, and `url` from the class's navigation properties.
+
+### Method overview
+
+| Method | Purpose |
+| --- | --- |
+| [`label()`](#label) | Override the card title |
+| [`description()`](#description) | Subtitle below the title |
+| [`badge()`](#badge--badgecolor) | Right-aligned badge |
+| [`badgeColor()`](#badge--badgecolor) | Badge color |
+| [`icon()`](#icon) | Override the card icon |
+| [`url()` / `openUrlInNewTab()`](#url--openurlinnewtab) | Override target URL |
+| [`alignment()`](#alignment) | Text alignment inside the card |
+| [`color()`](#color) | Color accent on the card |
+| [`visible()` / `hidden()`](#visible--hidden) | Conditional rendering |
+| [`disabled()`](#disabled) | Render but make non-clickable |
+| [`sort()`](#sort) | Order within a group |
+| [`columnSpan()` / `columnSpanFull()`](#columnspan--columnspanfull) | Grid span |
+| [`searchKeywords()`](#searchkeywords) | Extra terms for the search bar |
+| [`extraAttributes()`](#extraattributes) | Custom HTML attributes |
 
 ### `label()`
 
@@ -349,55 +380,33 @@ CardItem::make(CompanySettings::class)
 
 ### `description()`
 
-Add a subtitle below the card title:
+Add a subtitle below the title:
 
 ```php
 CardItem::make(CompanySettings::class)
     ->description('Manage company name, address, and branding')
 ```
 
-**Auto-Discovery:** If you are using `discoverClusterCards()` or `discoverResourceCards()`, you can add a static property to your page class instead:
+> **Auto-discovery shortcut:** add `public static ?string $navigationDescription` to the page/resource and `discoverClusterCards()` / `discoverResourceCards()` will pick it up automatically.
 
-```php
-class CompanySettings extends Page
-{
-    public static ?string $navigationDescription = 'Manage company details.';
-}
-```
-
-### `badge()`
-
-Add a badge to the right side of the card title:
+### `badge()` / `badgeColor()`
 
 ```php
 CardItem::make(CompanySettings::class)
     ->badge('Beta')
-```
-
-### `badgeColor()`
-
-Set the badge color using Filament color names (or an equivalent color definition):
-
-```php
-CardItem::make(CompanySettings::class)
-    ->badge('12')
     ->badgeColor('primary')
 ```
 
-**Auto-Discovery:** If you are using `discoverClusterCards()` or `discoverResourceCards()`, badge values are read from `getNavigationBadge()` and `getNavigationBadgeColor()` when available on the discovered Page/Resource.
+> **Auto-discovery:** read from `getNavigationBadge()` / `getNavigationBadgeColor()` when present on the discovered Page/Resource.
 
 ### `icon()`
-
-Override the card icon:
 
 ```php
 CardItem::make('/path')
     ->icon('heroicon-o-building-office')
 ```
 
-### `url()` and `openUrlInNewTab()`
-
-Override the URL or open in a new tab:
+### `url()` / `openUrlInNewTab()`
 
 ```php
 CardItem::make(CompanySettings::class)
@@ -407,7 +416,7 @@ CardItem::make(CompanySettings::class)
 
 ### `alignment()`
 
-Control the text alignment of the card content. Options: `Start`, `Center`, `End`, `Justify`:
+Text alignment inside the card. Options: `Start`, `Center`, `End`, `Justify`.
 
 ```php
 use Filament\Support\Enums\Alignment;
@@ -416,9 +425,18 @@ CardItem::make(CompanySettings::class)
     ->alignment(Alignment::Center)
 ```
 
-### `visible()` and `hidden()`
+### `color()`
 
-Control card visibility. Accepts a boolean or Closure:
+Color accent on the card. Available: `primary`, `success`, `danger`, `warning`, `info`, `gray`.
+
+```php
+CardItem::make(BillingSettings::class)->color('success')
+CardItem::make(DangerZone::class)->color('danger')
+```
+
+### `visible()` / `hidden()`
+
+Boolean or Closure:
 
 ```php
 CardItem::make(BillingSettings::class)
@@ -428,24 +446,9 @@ CardItem::make(DangerZone::class)
     ->hidden(fn () => ! auth()->user()->isAdmin())
 ```
 
-### `color()`
-
-Add a color accent to the card. Supports Filament's color system:
-
-```php
-CardItem::make(CompanySettings::class)->color('primary')
-CardItem::make(BillingSettings::class)->color('success')
-CardItem::make(DangerZone::class)->color('danger')
-CardItem::make(Notifications::class)->color('warning')
-CardItem::make(ApiSettings::class)->color('info')
-CardItem::make(LegacySettings::class)->color('gray')
-```
-
-Available colors: `primary`, `success`, `danger`, `warning`, `info`, `gray`.
-
 ### `disabled()`
 
-Show the card but make it non-clickable with reduced opacity:
+Render the card but make it non-clickable with reduced opacity:
 
 ```php
 CardItem::make(DangerZone::class)
@@ -454,26 +457,20 @@ CardItem::make(DangerZone::class)
 
 ### `sort()`
 
-Control the order of cards within a group:
+Order cards within a group:
 
 ```php
 CardItem::make(CompanySettings::class)->sort(1)
 CardItem::make(BillingSettings::class)->sort(2)
-CardItem::make(NotificationPrefs::class)->sort(3)
 ```
 
-### `columnSpan()` and `columnSpanFull()`
-
-Control how many grid columns a card occupies:
+### `columnSpan()` / `columnSpanFull()`
 
 ```php
-// Span 2 columns
 CardItem::make(CompanySettings::class)->columnSpan(2)
-
-// Span the full width
 CardItem::make(NotificationPrefs::class)->columnSpanFull()
 
-// Responsive spans
+// Responsive
 CardItem::make(CompanySettings::class)->columnSpan([
     'default' => 1,
     'md' => 2,
@@ -483,41 +480,34 @@ CardItem::make(CompanySettings::class)->columnSpan([
 
 ### `searchKeywords()`
 
-Add extra keywords used by the page search (`$searchable = true` on the CardsPage). The keywords are included in the search corpus alongside the label, description, and badge — useful for adding aliases, jargon, or related terms users might type instead of the visible label:
+Extra terms used by the page's search bar (when [`$searchable = true`](#searchable) on the CardsPage). Useful for aliases and jargon — the keywords are not displayed.
 
 ```php
 CardItem::make(BillingSettings::class)
     ->searchKeywords(['invoices', 'payments', 'subscriptions', 'finance'])
 
-// Single string also accepted
 CardItem::make(CompanySettings::class)
-    ->searchKeywords('organisation')
+    ->searchKeywords('organisation') // single string ok
 
-// Closure form
 CardItem::make(LegacyTools::class)
     ->searchKeywords(fn () => $this->resolveLegacyAliases())
 ```
 
-Keywords are not displayed anywhere — they only affect search matching.
-
-**Auto-Discovery:** If you are using `discoverClusterCards()` or `discoverResourceCards()`, you can declare keywords on the page/resource instead:
-
-```php
-class CompanySettings extends Page
-{
-    public static array $filamentCardsSearchKeywords = ['organisation', 'org'];
-
-    // …or as a method:
-    public static function getFilamentCardsSearchKeywords(): array
-    {
-        return ['organisation', 'org'];
-    }
-}
-```
+> **Auto-discovery:** declare on the page/resource directly:
+>
+> ```php
+> public static array $filamentCardsSearchKeywords = ['organisation', 'org'];
+>
+> // …or as a method
+> public static function getFilamentCardsSearchKeywords(): array
+> {
+>     return ['organisation', 'org'];
+> }
+> ```
 
 ### `extraAttributes()`
 
-Add custom HTML attributes to the card element:
+Custom HTML attributes on the card element:
 
 ```php
 CardItem::make(CompanySettings::class)
@@ -527,25 +517,24 @@ CardItem::make(CompanySettings::class)
     ])
 ```
 
-## API Reference: CardGroup
+---
 
-Groups organize cards under a collapsible header, similar to Filament's `Section`.
+## API Reference — `CardGroup`
 
-### Creating a Group
+Groups organize cards under a (collapsible) header — like Filament's `Section`.
 
-```php
-use Harvirsidhu\FilamentCards\CardGroup;
+### Method overview
 
-CardGroup::make('General Settings')
-    ->schema([
-        CardItem::make(CompanySettings::class),
-        CardItem::make(BillingSettings::class),
-    ])
-```
+| Method | Purpose |
+| --- | --- |
+| [`schema()`](#schema) | Cards inside the group |
+| [`label()` / `description()` / `icon()`](#label--description--icon-group) | Header customization |
+| [`columns()`](#columns) | Override grid columns for this group |
+| [`collapsible()` / `collapsed()`](#collapsible--collapsed) | Collapse behavior |
+| [`compact()`](#compact) | Tighter padding/gaps |
+| [`visible()` / `hidden()`](#group-level-visible--hidden) | Hide the whole group |
 
 ### `schema()`
-
-Define the card items in the group:
 
 ```php
 CardGroup::make('General')
@@ -555,10 +544,19 @@ CardGroup::make('General')
     ])
 ```
 
+### `label()` / `description()` / `icon()` (group)
+
+```php
+CardGroup::make('General')
+    ->label('General Settings')
+    ->description('Core application configuration')
+    ->icon('heroicon-o-cog')
+    ->schema([...])
+```
+
 ### `columns()`
 
-Override the grid columns for this specific group.
-You can use a single integer, or a responsive array (same style as Filament widgets):
+Integer or responsive array (Filament widget style):
 
 ```php
 CardGroup::make('Wide Cards')
@@ -573,18 +571,13 @@ CardGroup::make('Wide Cards')
     ->schema([...])
 ```
 
-### `collapsible()` and `collapsed()`
-
-Make the group collapsible, optionally starting collapsed:
+### `collapsible()` / `collapsed()`
 
 ```php
-CardGroup::make('Advanced')
-    ->collapsible()
-    ->schema([...])
+CardGroup::make('Advanced')->collapsible()->schema([...])
 
-CardGroup::make('Advanced')
-    ->collapsed() // Starts collapsed, implicitly collapsible
-    ->schema([...])
+// Starts collapsed (implicitly collapsible)
+CardGroup::make('Advanced')->collapsed()->schema([...])
 
 CardGroup::make('Advanced')
     ->collapsed(fn () => ! auth()->user()->isAdmin())
@@ -593,29 +586,13 @@ CardGroup::make('Advanced')
 
 ### `compact()`
 
-Reduce padding and gaps for a denser layout:
-
 ```php
 CardGroup::make('Quick Links')
     ->compact()
     ->schema([...])
 ```
 
-### `label()`, `description()`, `icon()`
-
-Customize the group header:
-
-```php
-CardGroup::make('General')
-    ->label('General Settings')
-    ->description('Core application configuration')
-    ->icon('heroicon-o-cog')
-    ->schema([...])
-```
-
-### Group-level `visible()` and `hidden()`
-
-Hide an entire group conditionally:
+### Group-level `visible()` / `hidden()`
 
 ```php
 CardGroup::make('Admin Only')
@@ -623,135 +600,141 @@ CardGroup::make('Admin Only')
     ->schema([...])
 ```
 
-## API Reference: CardsPage Configuration
+---
 
-Customize the CardsPage with static properties:
+## API Reference — `CardsPage` Configuration
+
+Configure the whole page with static properties.
+
+| Property | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| [`$columns`](#columns-1) | `int\|string\|array` | `3` | Grid columns (responsive supported) |
+| [`$itemsAlignment`](#itemsalignment) | `Alignment` | `Center` | Alignment of card content |
+| [`$iconSize`](#iconsize) | `IconSize` | `Medium` | Card icon size |
+| [`$iconInlined`](#iconinlined) | `bool` | `false` | Inline icon with title (vs stacked) |
+| [`$iconPosition`](#iconposition) | `IconPosition` | `Before` | Icon before or after the label |
+| [`$searchable`](#searchable) | `bool` | `false` | Show a client-side search bar |
+| [`$searchPlaceholder`](#searchplaceholder) | `?string` | `null` (`'Search…'`) | Placeholder text for the search input |
+| [`$excludedClusterComponents`](#excludedclustercomponents) | `array` | `[]` | Skip these classes in `discoverClusterCards()` |
+| [`$excludedResourcePages`](#excludedresourcepages) | `array` | `[]` | Skip these classes in `discoverResourceCards()` |
 
 ### `$columns`
 
-Default number of grid columns (default: `3`).
-Supports Filament widget-style responsive values:
-
 ```php
-class ControlPanel extends CardsPage
-{
-    protected static string|int|array $columns = 4;
-}
+protected static string|int|array $columns = 4;
 
-class ControlPanel extends CardsPage
-{
-    protected static string|int|array $columns = [
-        'md' => 2,
-        'xl' => 4,
-    ];
-}
+// Responsive
+protected static string|int|array $columns = [
+    'md' => 2,
+    'xl' => 4,
+];
 ```
 
 ### `$itemsAlignment`
 
-Alignment of card content. Options: `Start`, `Center`, `End`, `Justify` (default: `Center`):
-
 ```php
 use Filament\Support\Enums\Alignment;
 
-class ControlPanel extends CardsPage
-{
-    protected static Alignment $itemsAlignment = Alignment::Center;
-}
+protected static Alignment $itemsAlignment = Alignment::Center;
 ```
 
 ### `$iconSize`
 
-Size of card icons. Options: `Small`, `Medium`, `Large` (default: `Medium`):
-
 ```php
 use Filament\Support\Enums\IconSize;
 
-class ControlPanel extends CardsPage
-{
-    protected static IconSize $iconSize = IconSize::Small;
-}
+protected static IconSize $iconSize = IconSize::Small;
 ```
 
 ### `$iconInlined`
 
-Display the icon inline with the title instead of stacked above it:
-
 ```php
-class ControlPanel extends CardsPage
-{
-    protected static bool $iconInlined = true;
-}
+protected static bool $iconInlined = true;
 ```
 
 ### `$iconPosition`
 
-Controls whether the icon appears before or after the label. Options: `Before`, `After` (default: `Before`):
-
 ```php
 use Filament\Support\Enums\IconPosition;
 
-class ControlPanel extends CardsPage
-{
-    protected static IconPosition $iconPosition = IconPosition::After;
-}
+protected static IconPosition $iconPosition = IconPosition::After;
 ```
 
 ### `$searchable`
 
-Render a search bar at the top right of the page that filters cards live by label, description, and badge text. Empty groups (no matching items) are hidden automatically. Off by default:
+Renders a search bar at the top right. Filters cards live by label, description, badge, and any [`searchKeywords()`](#searchkeywords). Empty groups are auto-hidden. Filtering happens client-side via Alpine.js — no server round-trips.
 
 ```php
-class ControlPanel extends CardsPage
-{
-    protected static bool $searchable = true;
-}
+protected static bool $searchable = true;
 ```
-
-Filtering happens client-side via Alpine.js — no server round-trips.
 
 ### `$searchPlaceholder`
 
-Override the placeholder text on the search input. Only takes effect when `$searchable = true`:
-
 ```php
-class ControlPanel extends CardsPage
-{
-    protected static bool $searchable = true;
-    protected static ?string $searchPlaceholder = 'Find a tool...';
-}
+protected static bool $searchable = true;
+protected static ?string $searchPlaceholder = 'Find a tool...';
 ```
 
 ### `$excludedClusterComponents`
 
-Exclude specific Cluster pages/resources from `discoverClusterCards()`:
-
 ```php
-class SettingsHub extends CardsPage
-{
-    protected static array $excludedClusterComponents = [
-        AuditLogsResource::class,
-        InternalToolsPage::class,
-    ];
-}
+protected static array $excludedClusterComponents = [
+    AuditLogsResource::class,
+    InternalToolsPage::class,
+];
 ```
 
 ### `$excludedResourcePages`
 
-Exclude specific Resource pages from `discoverResourceCards()`:
-
 ```php
-class UserSettingsHub extends CardsPage
-{
-    protected static array $excludedResourcePages = [
-        UserResource\Pages\DangerZone::class,
-    ];
-}
+protected static array $excludedResourcePages = [
+    UserResource\Pages\DangerZone::class,
+];
 ```
 
-### `shouldIncludeDiscoveredCard()`
+---
 
-Override this hook for advanced, centralized filtering:
+## API Reference — Page/Resource Hooks (for auto-discovery)
+
+These are read off your existing Pages and Resources by `discoverClusterCards()` / `discoverResourceCards()`. **You add them only to pages you want discovered.**
+
+| Hook | Form | Purpose |
+| --- | --- | --- |
+| `$navigationDescription` | `public static ?string` | Subtitle text on the card |
+| `getNavigationDescription()` | `public static function (): ?string` | Same as above (method form) |
+| `$showInFilamentCards` | `public static bool` | Whether to include in cards |
+| `showInFilamentCards()` | `public static function (): bool` | Same (method form) |
+| `$filamentCardsGroup` | `public static ?string` | Override group name (otherwise `$navigationGroup`) |
+| `getFilamentCardsGroup()` | `public static function (): ?string` | Same (method form) |
+| `$filamentCardsSearchKeywords` | `public static array` | Extra search terms |
+| `getFilamentCardsSearchKeywords()` | `public static function (): array` | Same (method form) |
+| `getNavigationBadge()` | Filament built-in | Read by discovery for the card badge |
+| `getNavigationBadgeColor()` | Filament built-in | Read by discovery for the badge color |
+| `$navigationLabel` / `$navigationIcon` / `$navigationSort` / `$navigationGroup` | Filament built-in | Used as defaults for label/icon/order/group |
+
+---
+
+## Advanced — Dynamic Registration
+
+Add cards from outside the class — useful for modular apps and packages. Call from a service provider's `boot()`:
+
+```php
+use App\Filament\Pages\ControlPanel;
+use Harvirsidhu\FilamentCards\CardItem;
+
+ControlPanel::addCards([
+    CardItem::make(UserManagement::class)
+        ->label('User Accounts')
+        ->icon('heroicon-o-users')
+        ->description('Manage roles, permissions, and user accounts'),
+]);
+```
+
+---
+
+## Advanced — Custom Discovery Filtering
+
+Override `shouldIncludeDiscoveredCard()` for centralized inclusion logic that goes beyond exclude lists:
 
 ```php
 protected static function shouldIncludeDiscoveredCard(string $component): bool
@@ -764,32 +747,19 @@ protected static function shouldIncludeDiscoveredCard(string $component): bool
 }
 ```
 
-## Advanced: Dynamic Registration
+---
 
-Add cards to a CardsPage from outside the class -- useful for modular applications or packages:
+## Full Example
 
-```php
-use App\Filament\Pages\ControlPanel;
-use Harvirsidhu\FilamentCards\CardItem;
-
-// In a service provider boot() method:
-ControlPanel::addCards([
-    CardItem::make(UserManagement::class)
-        ->label('User Accounts')
-        ->icon('heroicon-o-users')
-        ->description('Manage roles, permissions, and user accounts'),
-]);
-```
-
-## Full Example (Putting It All Together)
+Everything together — auto-discovery, manual cards, groups, conditional visibility, and an external link:
 
 ```php
-use Harvirsidhu\FilamentCards\CardItem;
-use Harvirsidhu\FilamentCards\CardGroup;
-use Harvirsidhu\FilamentCards\Filament\Pages\CardsPage;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
+use Harvirsidhu\FilamentCards\CardGroup;
+use Harvirsidhu\FilamentCards\CardItem;
+use Harvirsidhu\FilamentCards\Filament\Pages\CardsPage;
 
 class SettingsHub extends CardsPage
 {
@@ -840,9 +810,11 @@ class SettingsHub extends CardsPage
 }
 ```
 
-## Optional: Filament Plugin Registration
+---
 
-Optionally register the plugin in your panel provider:
+## Optional — Plugin Registration
+
+Not required, but you can register the plugin in your panel provider for clarity:
 
 ```php
 use Harvirsidhu\FilamentCards\FilamentCardsPlugin;
@@ -856,6 +828,8 @@ public function panel(Panel $panel): Panel
 }
 ```
 
+---
+
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+MIT — see [License File](LICENSE.md).
