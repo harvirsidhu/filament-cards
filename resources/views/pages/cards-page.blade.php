@@ -2,6 +2,7 @@
     use Filament\Support\Enums\Alignment;
     use Filament\Support\Enums\IconPosition;
     use Filament\Support\Enums\IconSize;
+    use function Filament\Support\generate_href_html;
 
     $iconSizeClass = match ($iconSize) {
         IconSize::Small => 'w-6 h-6',
@@ -289,8 +290,7 @@
                                 >
                             @else
                                 <a
-                                    href="{{ $itemUrl }}"
-                                    @if ($openInNewTab) target="_blank" @endif
+                                    {{ generate_href_html($itemUrl, $openInNewTab) }}
                                     @if ($isSearchable)
                                         data-search-text="{{ $itemSearchText }}"
                                         x-show="!q || $el.dataset.searchText.includes(q.toLowerCase())"
