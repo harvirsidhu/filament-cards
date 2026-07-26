@@ -206,13 +206,25 @@ abstract class CardsPage extends Page
     }
 
     /**
-     * Group a collection of CardItems by their page's $navigationGroup.
+     * Group a collection of CardItems by their page's $navigationGroup,
+     * ordering both the groups and the cards within them the way Filament
+     * orders the sidebar.
+     *
+     * Sorting happens BEFORE grouping, which is what puts the groups in the
+     * right order: groupBy() preserves the order keys are first encountered,
+     * so a pre-sorted collection yields groups ordered by their lowest
+     * $navigationSort — exactly how Filament derives sidebar group order.
+     *
+     * Sorting only within each group (the previous behaviour) left group order
+     * at the mercy of component discovery, which is filesystem order. A cluster
+     * whose sidebar read Profile → Communications → People & Access could show
+     * its cards as Inventory → Billing → Profile, with no visible logic.
      *
      * @return array<CardGroup|CardItem>
      */
     protected static function groupItemsByNavigation(Collection $items): array
     {
-        $grouped = $items->groupBy(function (CardItem $item): ?string {
+        $groupOf = function (CardItem $item): ?string {
             $page = $item->getPage();
 
             if ($page === null) {
@@ -224,27 +236,33 @@ abstract class CardsPage extends Page
             }
 
             return null;
-        });
+        };
 
-        $result = [];
+        // An explicit comparator, not sortBy(): the group name is a tie-break
+        // (PHP's sort is not stable, so equal sorts would otherwise fall back
+        // to discovery order and differ between machines), and $navigationSort
+        // is routinely negative — so any zero-padded string key would misorder.
+        $sorted = $items->sort(fn (CardItem $a, CardItem $b): int => [$a->getSort(), (string) $groupOf($a)]
+            <=> [$b->getSort(), (string) $groupOf($b)]);
 
-        foreach ($grouped as $groupName => $groupItems) {
-            $sortedItems = $groupItems
-                ->sortBy(fn (CardItem $item): int => $item->getSort())
-                ->values()
-                ->all();
+        $ungrouped = [];
+        $groups = [];
 
-            if (filled($groupName)) {
-                $result[] = CardGroup::make($groupName)
-                    ->schema($sortedItems);
-            } else {
-                foreach ($sortedItems as $item) {
-                    $result[] = $item;
-                }
+        foreach ($sorted->groupBy($groupOf) as $groupName => $groupItems) {
+            if (blank($groupName)) {
+                // Filament renders ungrouped navigation items above the groups.
+                // Emitting them inline would drop a lone card between two
+                // group headings, where it reads as part of the wrong group.
+                $ungrouped = [...$ungrouped, ...$groupItems->values()->all()];
+
+                continue;
             }
+
+            $groups[] = CardGroup::make($groupName)
+                ->schema($groupItems->values()->all());
         }
 
-        return $result;
+        return [...$ungrouped, ...$groups];
     }
 
     protected static function getClusterClass(): ?string
