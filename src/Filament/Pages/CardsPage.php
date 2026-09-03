@@ -574,7 +574,7 @@ abstract class CardsPage extends Page
      */
     protected function getProcessedGroups(): Collection
     {
-        if ($this->processedGroups instanceof \Illuminate\Support\Collection) {
+        if ($this->processedGroups instanceof Collection) {
             return $this->processedGroups;
         }
 

@@ -2,6 +2,7 @@
 
 use Harvirsidhu\FilamentCards\CardItem;
 use Harvirsidhu\FilamentCards\Filament\Pages\CardsPage;
+use Harvirsidhu\FilamentCards\Tests\Fixtures\HubBillingPage;
 use Harvirsidhu\FilamentCards\Tests\Fixtures\HubTestResource;
 
 /**
@@ -27,7 +28,7 @@ class ResourceHubExcludingPage extends CardsPage
     protected static string $resource = HubTestResource::class;
 
     protected static array $excludedResourcePages = [
-        \Harvirsidhu\FilamentCards\Tests\Fixtures\HubBillingPage::class,
+        HubBillingPage::class,
     ];
 
     public static function cards(): array

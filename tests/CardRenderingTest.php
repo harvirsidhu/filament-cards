@@ -299,9 +299,9 @@ it('renders card icons at their own scale, not Filament inline-glyph sizes', fun
 
 it('scales the card icon with the page icon size setting', function () {
     $cases = [
-        [\Filament\Support\Enums\IconSize::Small, 'size-6'],
-        [\Filament\Support\Enums\IconSize::Medium, 'size-10'],
-        [\Filament\Support\Enums\IconSize::Large, 'size-12'],
+        [IconSize::Small, 'size-6'],
+        [IconSize::Medium, 'size-10'],
+        [IconSize::Large, 'size-12'],
     ];
 
     foreach ($cases as [$size, $expected]) {

@@ -3,11 +3,12 @@
 namespace Harvirsidhu\FilamentCards\View\Components\CardComponent;
 
 use Filament\Support\View\Components\Contracts\HasColor;
+use Harvirsidhu\FilamentCards\View\Components\CardComponent;
 
 /**
  * The colour treatment for a card's icon.
  *
- * @see \Harvirsidhu\FilamentCards\View\Components\CardComponent
+ * @see CardComponent
  */
 class IconComponent implements HasColor
 {
