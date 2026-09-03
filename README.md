@@ -26,7 +26,8 @@ It feels like part of Filament: same API patterns (`label`, `schema`, `columnSpa
 14. [Advanced — Custom Discovery Filtering](#advanced--custom-discovery-filtering)
 15. [Full Example](#full-example)
 16. [Optional — Plugin Registration](#optional--plugin-registration)
-17. [License](#license)
+17. [Translations](#translations)
+18. [License](#license)
 
 ---
 
@@ -289,6 +290,8 @@ class UserSettingsHub extends CardsPage
 }
 ```
 
+`$resource` is what tells the page which resource to read; `discoverResourceCards()` returns nothing without it.
+
 Same hooks (`showInFilamentCards`, `$navigationDescription`, etc.) work here. To exclude specific pages:
 
 ```php
@@ -345,7 +348,9 @@ CardItem::make('/custom/path')          // Internal URL
 CardItem::make('https://example.com')   // External URL
 ```
 
-When given a Page/Resource class, the card auto-resolves `label`, `icon`, `badge`, `badgeColor`, and `url` from the class's navigation properties.
+When given a Page/Resource class, the card auto-resolves `label`, `icon`, `description`, `badge`, `badgeColor`, and `url` from the class's navigation properties — lazily, so a badge that runs a count query only runs it if the card is actually shown.
+
+Such a card is also **hidden automatically when the user cannot access the target**, so the grid never offers a link that lands on a 403. See [`checkAccess()`](#checkaccess) to opt out.
 
 ### Method overview
 
@@ -364,6 +369,8 @@ When given a Page/Resource class, the card auto-resolves `label`, `icon`, `badge
 | [`sort()`](#sort) | Order within a group |
 | [`columnSpan()` / `columnSpanFull()`](#columnspan--columnspanfull) | Grid span |
 | [`searchKeywords()`](#searchkeywords) | Extra terms for the search bar |
+| [`actions()`](#actions) | Filament actions rendered on the card |
+| [`checkAccess()`](#checkaccess) | Opt out of the automatic `canAccess()` check |
 | [`extraAttributes()`](#extraattributes) | Custom HTML attributes |
 
 ### `label()`
@@ -505,6 +512,32 @@ CardItem::make(LegacyTools::class)
 > }
 > ```
 
+### `actions()`
+
+Render Filament actions on a card. Action names must be unique across the page — the same constraint Filament puts on a page's header actions.
+
+```php
+use Filament\Actions\Action;
+
+CardItem::make(CacheSettings::class)
+    ->actions([
+        Action::make('clearCache')
+            ->label('Clear now')
+            ->requiresConfirmation()
+            ->action(fn () => Artisan::call('cache:clear')),
+    ])
+```
+
+A card with actions keeps its whole surface clickable via a stretched overlay link, because a `<button>` nested inside an `<a>` is invalid HTML and unreachable by keyboard.
+
+### `checkAccess()`
+
+Cards built from a Page or Resource class are hidden when `canAccess()` returns false. Turn that off for a card whose target is guarded by something Filament cannot see:
+
+```php
+CardItem::make(LegacyReportPage::class)->checkAccess(false)
+```
+
 ### `extraAttributes()`
 
 Custom HTML attributes on the card element:
@@ -532,6 +565,9 @@ Groups organize cards under a (collapsible) header — like Filament's `Section`
 | [`columns()`](#columns) | Override grid columns for this group |
 | [`collapsible()` / `collapsed()`](#collapsible--collapsed) | Collapse behavior |
 | [`compact()`](#compact) | Tighter padding/gaps |
+| [`persistCollapsed()`](#persistcollapsed) | Remember collapse state across page loads |
+| [`contained()`](#contained) | Render the group inside a Filament section |
+| [`id()`](#id) | Stable identifier for persisted collapse state |
 | [`visible()` / `hidden()`](#group-level-visible--hidden) | Hide the whole group |
 
 ### `schema()`
@@ -584,6 +620,32 @@ CardGroup::make('Advanced')
     ->schema([...])
 ```
 
+### `persistCollapsed()`
+
+Remembers whether the user collapsed a group, using the same Alpine `$persist` mechanism as Filament's own sections, so it does not spring open on every navigation.
+
+```php
+CardGroup::make('Advanced')->collapsed()->persistCollapsed()->schema([...])
+```
+
+Turn it on for every group in the panel with `FilamentCardsPlugin::make()->persistCollapsed()`.
+
+### `contained()`
+
+Renders the group inside a Filament `Section` instead of under a plain heading, so it matches the rest of the panel's chrome:
+
+```php
+CardGroup::make('Billing')->contained()->collapsible()->schema([...])
+```
+
+### `id()`
+
+Groups derive a slug from their label to key persisted collapse state. Set one explicitly when the label is dynamic:
+
+```php
+CardGroup::make(fn () => $this->tenantName)->id('tenant')->persistCollapsed()->schema([...])
+```
+
 ### `compact()`
 
 ```php
@@ -606,6 +668,19 @@ CardGroup::make('Admin Only')
 
 Configure the whole page with static properties.
 
+Each setting resolves in this order:
+
+**page static property → [plugin default](#optional--plugin-registration) → package default**
+
+so a page that declares a property always wins, and pages that declare nothing follow the panel. Every setting also has an overridable getter (`getCardsColumns()`, `isCardsSearchable()`, `getCardsItemsAlignment()`, `getCardsIconSize()`, `getCardsIconPosition()`, `hasInlinedCardIcons()`, `getCardsSearchPlaceholder()`) for values you need to compute at runtime:
+
+```php
+public static function getCardsColumns(): int|string|array
+{
+    return auth()->user()->prefersDenseLayout() ? 4 : 3;
+}
+```
+
 | Property | Type | Default | Purpose |
 | --- | --- | --- | --- |
 | [`$columns`](#columns-1) | `int\|string\|array` | `3` | Grid columns (responsive supported) |
@@ -619,6 +694,8 @@ Configure the whole page with static properties.
 | [`$excludedResourcePages`](#excludedresourcepages) | `array` | `[]` | Skip these classes in `discoverResourceCards()` |
 
 ### `$columns`
+
+Declare the full `int|string|array` type — PHP requires a redeclared static property to match the parent's type exactly, so `protected static int $columns` is a fatal error.
 
 ```php
 protected static string|int|array $columns = 4;
@@ -764,7 +841,7 @@ use Harvirsidhu\FilamentCards\Filament\Pages\CardsPage;
 class SettingsHub extends CardsPage
 {
     protected static ?string $navigationIcon = 'heroicon-o-cog-8-tooth';
-    protected static int $columns = 3;
+    protected static int|string|array $columns = 3;
     protected static Alignment $itemsAlignment = Alignment::Center;
     protected static IconSize $iconSize = IconSize::Medium;
     protected static IconPosition $iconPosition = IconPosition::Before;
@@ -814,18 +891,46 @@ class SettingsHub extends CardsPage
 
 ## Optional — Plugin Registration
 
-Not required, but you can register the plugin in your panel provider for clarity:
+Not required, but registering the plugin lets you set defaults once for **every** cards page in the panel, instead of redeclaring the same statics on each:
 
 ```php
+use Filament\Support\Enums\Alignment;
 use Harvirsidhu\FilamentCards\FilamentCardsPlugin;
 
 public function panel(Panel $panel): Panel
 {
     return $panel
         ->plugins([
-            FilamentCardsPlugin::make(),
+            FilamentCardsPlugin::make()
+                ->columns(4)
+                ->itemsAlignment(Alignment::Start)
+                ->searchable()
+                ->persistCollapsed(),
         ]);
 }
+```
+
+| Method | Sets the default for |
+| --- | --- |
+| `columns()` | `$columns` |
+| `itemsAlignment()` | `$itemsAlignment` |
+| `iconSize()` | `$iconSize` |
+| `iconPosition()` | `$iconPosition` |
+| `iconInlined()` | `$iconInlined` |
+| `searchable()` | `$searchable` |
+| `searchPlaceholder()` | `$searchPlaceholder` |
+| `persistCollapsed()` | Whether collapsible groups remember their state |
+
+A page that declares the corresponding static property still wins — see [the resolution order](#api-reference--cardspage-configuration).
+
+---
+
+## Translations
+
+Every user-facing string (the search placeholder, the screen-reader labels, the empty states) lives in the package's language files. Publish them to customise:
+
+```bash
+php artisan vendor:publish --tag=filament-cards-translations
 ```
 
 ---

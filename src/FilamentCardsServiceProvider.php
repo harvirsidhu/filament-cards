@@ -15,6 +15,11 @@ class FilamentCardsServiceProvider extends PackageServiceProvider
     {
         $package
             ->name(static::$name)
-            ->hasViews(static::$viewNamespace);
+            ->hasViews(static::$viewNamespace)
+            // The package shipped a lang directory that was never registered,
+            // so every string in the view resolved against the application's
+            // own translations instead — which meant the search placeholder
+            // and the screen-reader labels could not be translated at all.
+            ->hasTranslations();
     }
 }

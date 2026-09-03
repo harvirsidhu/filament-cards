@@ -4,6 +4,7 @@ namespace Harvirsidhu\FilamentCards;
 
 use BackedEnum;
 use Closure;
+use Filament\Actions\Action;
 use Filament\Actions\Concerns\CanBeSorted;
 use Filament\Pages\Page;
 use Filament\Resources\Resource;
@@ -32,33 +33,35 @@ class CardItem
     use HasIcon;
     use HasLabel;
 
-    protected ?string $page = null;
-
-    protected string | Closure | null $url = null;
-
-    protected bool $openUrlInNewTab = false;
+    protected bool | Closure $openUrlInNewTab = false;
 
     protected Alignment | string | Closure | null $alignment = null;
 
     protected string | Htmlable | Closure | null $badge = null;
 
+    /** @var string|array<int|string, string>|Closure|null */
     protected string | array | Closure | null $badgeColor = null;
 
+    /** @var string|array<int, string>|Closure|null */
     protected string | array | Closure | null $searchKeywords = null;
 
-    public function __construct(?string $page = null, string | Closure | null $url = null)
-    {
-        $this->page = $page;
-        $this->url = $url;
-    }
+    protected bool | Closure $shouldCheckAccess = true;
+
+    /** @var array<int, Action> */
+    protected array $actions = [];
+
+    /**
+     * @param  class-string|null  $page
+     */
+    public function __construct(protected ?string $page = null, protected string | Closure | null $url = null) {}
 
     public static function make(string $pageClassOrUrl): static
     {
         if (class_exists($pageClassOrUrl) && (is_a($pageClassOrUrl, Page::class, true) || is_a($pageClassOrUrl, Resource::class, true))) {
-            return new static(page: $pageClassOrUrl);
+            return new static(page: $pageClassOrUrl); // @phpstan-ignore-line new.static
         }
 
-        return new static(url: $pageClassOrUrl);
+        return new static(url: $pageClassOrUrl); // @phpstan-ignore-line new.static
     }
 
     public function alignment(Alignment | string | Closure | null $alignment): static
@@ -80,7 +83,7 @@ class CardItem
         return $this;
     }
 
-    public function openUrlInNewTab(bool $condition = true): static
+    public function openUrlInNewTab(bool | Closure $condition = true): static
     {
         $this->openUrlInNewTab = $condition;
 
@@ -89,12 +92,104 @@ class CardItem
 
     public function shouldOpenUrlInNewTab(): bool
     {
-        return $this->openUrlInNewTab;
+        return (bool) $this->evaluate($this->openUrlInNewTab);
     }
 
+    /**
+     * @return class-string|null
+     */
     public function getPage(): ?string
     {
         return $this->page;
+    }
+
+    /**
+     * Opt a card out of the automatic `canAccess()` check.
+     *
+     * A card built from a page or resource class is hidden when the current
+     * user cannot access that class, so the grid never offers a link that
+     * lands on a 403. Turn this off for the rare card that points at a page
+     * guarded by something Filament cannot see from `canAccess()`.
+     */
+    public function checkAccess(bool | Closure $condition = true): static
+    {
+        $this->shouldCheckAccess = $condition;
+
+        return $this;
+    }
+
+    public function shouldCheckAccess(): bool
+    {
+        return (bool) $this->evaluate($this->shouldCheckAccess);
+    }
+
+    /**
+     * Whether the current user may open this card's destination.
+     *
+     * Cards with a plain URL have nothing to check, so they are always
+     * considered accessible.
+     */
+    public function canAccess(): bool
+    {
+        if ($this->page === null) {
+            return true;
+        }
+
+        if (! $this->shouldCheckAccess()) {
+            return true;
+        }
+
+        if (! method_exists($this->page, 'canAccess')) {
+            return true;
+        }
+
+        return (bool) $this->page::canAccess();
+    }
+
+    /**
+     * A card is visible only when it is both un-hidden and reachable — the
+     * access check is folded in here so every render path gets it, rather
+     * than only the discovery helpers that happened to call `canAccess()`.
+     */
+    public function isVisible(): bool
+    {
+        if ($this->isHidden()) {
+            return false;
+        }
+
+        return $this->canAccess();
+    }
+
+    /**
+     * Attach Filament actions to this card.
+     *
+     * Action names must be unique across the page, the same constraint
+     * Filament puts on a page's header actions — the page caches them by
+     * name so Livewire can mount them.
+     *
+     * @param  array<int, Action>  $actions
+     */
+    public function actions(array $actions): static
+    {
+        $this->actions = $actions;
+
+        return $this;
+    }
+
+    /**
+     * @return array<int, Action>
+     */
+    public function getActions(): array
+    {
+        return array_values(array_filter(
+            $this->actions,
+            fn (Action $action): bool => $action->isVisible(),
+        ));
+    }
+
+    public function hasActions(): bool
+    {
+        return $this->getActions() !== [];
     }
 
     public function badge(string | Htmlable | Closure | null $badge): static
@@ -121,16 +216,17 @@ class CardItem
                 }
             }
 
-            if ($resource = $this->getPageResource()) {
-                if (method_exists($resource, 'getNavigationBadge')) {
-                    return $resource::getNavigationBadge();
-                }
+            if (($resource = $this->getPageResource()) && method_exists($resource, 'getNavigationBadge')) {
+                return $resource::getNavigationBadge();
             }
         }
 
         return null;
     }
 
+    /**
+     * @param  string|array<int|string, string>|Closure|null  $badgeColor
+     */
     public function badgeColor(string | array | Closure | null $badgeColor): static
     {
         $this->badgeColor = $badgeColor;
@@ -138,6 +234,9 @@ class CardItem
         return $this;
     }
 
+    /**
+     * @return string|array<int|string, string>|null
+     */
     public function getBadgeColor(): string | array | null
     {
         $badgeColor = $this->evaluate($this->badgeColor);
@@ -155,16 +254,17 @@ class CardItem
                 }
             }
 
-            if ($resource = $this->getPageResource()) {
-                if (method_exists($resource, 'getNavigationBadgeColor')) {
-                    return $resource::getNavigationBadgeColor();
-                }
+            if (($resource = $this->getPageResource()) && method_exists($resource, 'getNavigationBadgeColor')) {
+                return $resource::getNavigationBadgeColor();
             }
         }
 
         return null;
     }
 
+    /**
+     * @param  string|array<int, string>|Closure|null  $keywords
+     */
     public function searchKeywords(string | array | Closure | null $keywords): static
     {
         $this->searchKeywords = $keywords;
@@ -173,7 +273,7 @@ class CardItem
     }
 
     /**
-     * @return array<string>
+     * @return array<int, string>
      */
     public function getSearchKeywords(): array
     {
@@ -192,7 +292,7 @@ class CardItem
         }
 
         return array_values(array_filter(
-            array_map('trim', is_array($keywords) ? $keywords : [$keywords]),
+            array_map(trim(...), is_array($keywords) ? $keywords : [$keywords]),
             fn (string $keyword): bool => $keyword !== '',
         ));
     }
@@ -205,12 +305,45 @@ class CardItem
             return $label;
         }
 
-        if ($this->page !== null) {
-            if ($resource = $this->getPageResource()) {
-                return $resource::getNavigationLabel();
-            }
+        if ($this->page === null) {
+            return null;
+        }
 
-            return $this->page::getNavigationLabel();
+        // The page's own navigation label comes first. Deferring to the
+        // resource ahead of it made every card for a resource's sub-page
+        // show the resource's name, so a hub of "Profile / Billing / Team"
+        // rendered as three cards all labelled "Users".
+        $label = $this->page::getNavigationLabel();
+
+        if (filled($label)) {
+            return $label;
+        }
+
+        if ($resource = $this->getPageResource()) {
+            return $resource::getNavigationLabel();
+        }
+
+        return null;
+    }
+
+    public function getDescription(): string | Htmlable | null
+    {
+        $description = $this->evaluate($this->description);
+
+        if (filled($description)) {
+            return $description;
+        }
+
+        if ($this->page === null) {
+            return null;
+        }
+
+        if (method_exists($this->page, 'getNavigationDescription')) {
+            return $this->page::getNavigationDescription();
+        }
+
+        if (property_exists($this->page, 'navigationDescription')) {
+            return $this->page::$navigationDescription;
         }
 
         return null;
@@ -239,7 +372,19 @@ class CardItem
         return $default;
     }
 
-    public function getUrl(): string
+    /**
+     * Whether this card actually points somewhere.
+     *
+     * A card with neither a page nor a URL used to render as an anchor to
+     * `#`, which looks clickable and goes nowhere; the view now renders it as
+     * plain, non-interactive content instead.
+     */
+    public function hasUrl(): bool
+    {
+        return filled($this->getUrl());
+    }
+
+    public function getUrl(): ?string
     {
         $url = $this->evaluate($this->url);
 
@@ -248,16 +393,15 @@ class CardItem
         }
 
         if ($this->page !== null) {
-            if (is_a($this->page, Resource::class, true)) {
-                return $this->page::getUrl();
-            }
-
             return $this->page::getUrl();
         }
 
-        return '#';
+        return null;
     }
 
+    /**
+     * @return class-string|null
+     */
     protected function getPageResource(): ?string
     {
         if ($this->page === null) {

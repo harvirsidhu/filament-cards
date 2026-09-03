@@ -14,6 +14,7 @@ use Filament\Support\SupportServiceProvider;
 use Filament\Tables\TablesServiceProvider;
 use Filament\Widgets\WidgetsServiceProvider;
 use Harvirsidhu\FilamentCards\FilamentCardsServiceProvider;
+use Harvirsidhu\FilamentCards\Tests\Fixtures\TestPanelProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\LivewireServiceProvider;
@@ -52,6 +53,7 @@ class TestCase extends Orchestra
             TablesServiceProvider::class,
             WidgetsServiceProvider::class,
             FilamentCardsServiceProvider::class,
+            TestPanelProvider::class,
         ];
 
         sort($providers);
@@ -62,6 +64,9 @@ class TestCase extends Orchestra
     public function getEnvironmentSetUp($app): void
     {
         $app['config']->set('database.default', 'testing');
+        // Filament's page layout renders CSRF-bearing forms, so the panel
+        // cannot boot without an encryption key.
+        $app['config']->set('app.key', 'base64:' . base64_encode(random_bytes(32)));
     }
 
     protected function defineDatabaseMigrations(): void

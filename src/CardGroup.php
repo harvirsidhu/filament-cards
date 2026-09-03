@@ -19,16 +19,23 @@ class CardGroup
     use HasIcon;
     use HasLabel;
 
-    /** @var array<CardItem> */
+    /** @var array<int, CardItem> */
     protected array $schema = [];
 
+    /** @var int|string|array<string, int|string|null>|Closure|null */
     protected int | string | array | Closure | null $columns = null;
 
-    protected bool $isCollapsible = false;
+    protected bool | Closure $isCollapsible = false;
 
     protected bool | Closure $isCollapsed = false;
 
-    protected bool $isCompact = false;
+    protected bool | Closure $isCompact = false;
+
+    protected bool | Closure | null $shouldPersistCollapsed = null;
+
+    protected bool | Closure $isContained = false;
+
+    protected ?string $id = null;
 
     public function __construct(string | Closure | null $label = null)
     {
@@ -37,11 +44,11 @@ class CardGroup
 
     public static function make(string | Closure | null $label = null): static
     {
-        return new static($label);
+        return new static($label); // @phpstan-ignore-line new.static
     }
 
     /**
-     * @param  array<CardItem>  $items
+     * @param  array<int, CardItem>  $items
      */
     public function schema(array $items): static
     {
@@ -50,6 +57,9 @@ class CardGroup
         return $this;
     }
 
+    /**
+     * @param  int|string|array<string, int|string|null>|Closure|null  $columns
+     */
     public function columns(int | string | array | Closure | null $columns): static
     {
         $this->columns = $columns;
@@ -57,7 +67,7 @@ class CardGroup
         return $this;
     }
 
-    public function collapsible(bool $condition = true): static
+    public function collapsible(bool | Closure $condition = true): static
     {
         $this->isCollapsible = $condition;
 
@@ -72,16 +82,69 @@ class CardGroup
         return $this;
     }
 
-    public function compact(bool $condition = true): static
+    /**
+     * Remember whether this group is collapsed across page loads.
+     *
+     * Backed by Alpine's `$persist`, the same mechanism Filament's own
+     * collapsible sections use, so a group the user closed stays closed
+     * instead of springing open on every navigation.
+     */
+    public function persistCollapsed(bool | Closure $condition = true): static
+    {
+        $this->shouldPersistCollapsed = $condition;
+
+        return $this;
+    }
+
+    public function compact(bool | Closure $condition = true): static
     {
         $this->isCompact = $condition;
 
         return $this;
     }
 
+    /**
+     * Render this group inside a Filament section rather than under a plain
+     * heading. Gives the group a card-like container that matches the rest of
+     * the panel, at the cost of a heavier look.
+     */
+    public function contained(bool | Closure $condition = true): static
+    {
+        $this->isContained = $condition;
+
+        return $this;
+    }
+
+    /**
+     * A stable identifier, used to key the group's persisted collapse state.
+     *
+     * Defaults to a slug of the label so that two pages with a "Billing"
+     * group do not fight over the same stored value once the page name is
+     * mixed in by the view.
+     */
+    public function id(?string $id): static
+    {
+        $this->id = $id;
+
+        return $this;
+    }
+
+    public function getId(): string
+    {
+        if (filled($this->id)) {
+            return $this->id;
+        }
+
+        $label = $this->getLabel();
+
+        return filled($label)
+            ? str(strip_tags((string) $label))->slug()->toString()
+            : 'ungrouped';
+    }
+
     public function isCollapsible(): bool
     {
-        return $this->isCollapsible;
+        return (bool) $this->evaluate($this->isCollapsible);
     }
 
     public function isCollapsed(): bool
@@ -89,18 +152,33 @@ class CardGroup
         return (bool) $this->evaluate($this->isCollapsed);
     }
 
-    public function isCompact(): bool
+    public function shouldPersistCollapsed(): ?bool
     {
-        return $this->isCompact;
+        $shouldPersist = $this->evaluate($this->shouldPersistCollapsed);
+
+        return $shouldPersist === null ? null : (bool) $shouldPersist;
     }
 
+    public function isCompact(): bool
+    {
+        return (bool) $this->evaluate($this->isCompact);
+    }
+
+    public function isContained(): bool
+    {
+        return (bool) $this->evaluate($this->isContained);
+    }
+
+    /**
+     * @return int|string|array<string, int|string|null>|null
+     */
     public function getColumns(): int | string | array | null
     {
         return $this->evaluate($this->columns);
     }
 
     /**
-     * @return array<CardItem>
+     * @return array<int, CardItem>
      */
     public function getItems(): array
     {
@@ -109,5 +187,10 @@ class CardGroup
             ->sortBy(fn (CardItem $item): int => $item->getSort())
             ->values()
             ->all();
+    }
+
+    public function hasItems(): bool
+    {
+        return $this->getItems() !== [];
     }
 }
